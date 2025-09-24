@@ -14,13 +14,13 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Label } from "@/components/ui/label"
 import { format, addDays, isBefore, startOfDay, differenceInDays, addMonths } from "date-fns"
-import { CalendarIcon, CheckCircle2 } from "lucide-react"
+import { CalendarIcon, CheckCircle2, Minus, Plus } from "lucide-react"
 
 interface TimeBookingDialogProps {
   product: Product
   open: boolean
   onOpenChange: (open: boolean) => void
-  onConfirm: (startDate?: string, endDate?: string, days?: number) => void
+  onConfirm: (startDate?: string, endDate?: string, days?: number, quantity?: number) => void
 }
 
 const mockBookings: Booking[] = [
@@ -41,6 +41,16 @@ const mockBookings: Booking[] = [
     endTime: "2025-01-22",
     customerEmail: "sarah@example.com",
     customerName: "Sarah Johnson",
+    status: "confirmed",
+    price: 30.0,
+  },
+  {
+    productId: "10010",
+    productName: "Cover set white",
+    startTime: "2025-02-01",
+    endTime: "2025-02-03",
+    customerEmail: "alex@example.com",
+    customerName: "Alex Brown",
     status: "confirmed",
     price: 30.0,
   },
@@ -66,11 +76,11 @@ const mockBookings: Booking[] = [
   },
 ]
 
-const getProductAvailability = (productId: string, date: Date): boolean => {
+const getProductAvailability = (productId: string, date: Date, requestedQuantity: number): boolean => {
   const dateString = format(date, "yyyy-MM-dd")
 
-  // Check if the date falls within any confirmed booking for this product
-  const isBooked = mockBookings.some((booking) => {
+  // Count how many items of this product are already booked on this date
+  const bookedQuantity = mockBookings.filter((booking) => {
     if (booking.productId !== productId || booking.status !== "confirmed") {
       return false
     }
@@ -81,14 +91,19 @@ const getProductAvailability = (productId: string, date: Date): boolean => {
 
     // Check if the date is within the booking range (inclusive)
     return checkDate >= bookingStart && checkDate <= bookingEnd
-  })
+  }).length
 
-  return !isBooked
+  // Assume we have a maximum of 10 items per product type (this could be dynamic)
+  const maxAvailable = 10
+  const availableQuantity = maxAvailable - bookedQuantity
+
+  return availableQuantity >= requestedQuantity
 }
 
 export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: TimeBookingDialogProps) {
   const [selectedDates, setSelectedDates] = useState<Date[]>([])
   const [selectionMode, setSelectionMode] = useState<"single" | "range">("single")
+  const [quantity, setQuantity] = useState(1)
 
   const startDate = selectedDates.length > 0 ? selectedDates[0] : undefined
   const endDate = selectedDates.length > 0 ? selectedDates[selectedDates.length - 1] : undefined
@@ -96,7 +111,7 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
 
   const handleConfirm = () => {
     if (startDate && endDate) {
-      onConfirm(format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd"), numberOfDays)
+      onConfirm(format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd"), numberOfDays, quantity)
     }
   }
 
@@ -106,13 +121,14 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
 
   const isDateAvailable = (date: Date) => {
     if (isDateDisabled(date)) return false
-    return getProductAvailability(product.id, date)
+    return getProductAvailability(product.id, date, quantity)
   }
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       setSelectedDates([])
       setSelectionMode("single")
+      setQuantity(1)
     }
     onOpenChange(open)
   }
@@ -180,7 +196,19 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
     return selectedDates.some((selectedDate) => format(selectedDate, "yyyy-MM-dd") === format(date, "yyyy-MM-dd"))
   }
 
-  const totalPrice = product.price * numberOfDays
+  const handleQuantityChange = (newQuantity: number) => {
+    if (newQuantity < 1) return
+    setQuantity(newQuantity)
+    // Clear selected dates if they're no longer available with new quantity
+    if (selectedDates.length > 0) {
+      const stillAvailable = selectedDates.every((date) => getProductAvailability(product.id, date, newQuantity))
+      if (!stillAvailable) {
+        setSelectedDates([])
+      }
+    }
+  }
+
+  const totalPrice = product.price * numberOfDays * quantity
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -194,7 +222,7 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
               Book {product.name}
             </DialogTitle>
             <DialogDescription className="text-base">
-              Select your rental period • €{product.price.toFixed(2)} per day
+              Select your rental period • €{product.price.toFixed(2)} per day per item
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -202,6 +230,35 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
         <div className="p-6">
           <div className="grid lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
+              <div>
+                <Label className="text-base font-medium mb-3 block">Quantity</Label>
+                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg w-fit">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleQuantityChange(quantity - 1)}
+                    disabled={quantity <= 1}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="text-lg font-medium min-w-[3rem] text-center">
+                    {quantity} item{quantity > 1 ? "s" : ""}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleQuantityChange(quantity + 1)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Availability is checked for all {quantity} item{quantity > 1 ? "s" : ""} of this product
+                </p>
+              </div>
+
               <div>
                 <Label className="text-base font-medium mb-3 block">Selection Mode</Label>
                 <div className="flex gap-2 p-1 bg-muted rounded-lg">
@@ -235,7 +292,9 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
                 <div className="flex gap-4 mb-4 p-3 bg-muted/50 rounded-lg">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-sm text-muted-foreground">Available</span>
+                    <span className="text-sm text-muted-foreground">
+                      Available ({quantity} item{quantity > 1 ? "s" : ""})
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-red-500 rounded-full"></div>
@@ -312,8 +371,8 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
 
                 <p className="text-sm text-muted-foreground mt-4">
                   {selectionMode === "single"
-                    ? "Click on a green (available) date to select it for rental"
-                    : "Click on a start date, then click on an end date to select a range. All dates in the range must be available."}
+                    ? `Click on a green (available) date to select it for rental. Green dates have ${quantity} or more items available.`
+                    : `Click on a start date, then click on an end date to select a range. All dates in the range must have ${quantity} or more items available.`}
                 </p>
               </div>
             </div>
@@ -324,6 +383,12 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
                   <Label className="text-base font-medium">Booking Summary</Label>
                   <div className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border border-primary/20">
                     <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Quantity</span>
+                        <span className="font-medium">
+                          {quantity} item{quantity > 1 ? "s" : ""}
+                        </span>
+                      </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Start Date</span>
                         <span className="font-medium">{format(startDate, "MMM dd, yyyy")}</span>
@@ -343,12 +408,16 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
                         <span className="font-medium">Total Price</span>
                         <span className="text-2xl font-bold text-primary">€{totalPrice.toFixed(2)}</span>
                       </div>
+                      <div className="text-xs text-muted-foreground">
+                        €{product.price.toFixed(2)} × {quantity} item{quantity > 1 ? "s" : ""} × {numberOfDays} day
+                        {numberOfDays > 1 ? "s" : ""}
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-2 mt-4 p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
                       <CheckCircle2 className="h-4 w-4 text-green-600" />
                       <span className="text-sm text-green-700 dark:text-green-400 font-medium">
-                        Available for selected period
+                        {quantity} item{quantity > 1 ? "s" : ""} available for selected period
                       </span>
                     </div>
                   </div>

@@ -15,7 +15,7 @@ export function Header() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-8">
             <Link href="/">
-              <h1 className="text-2xl font-bold cursor-pointer">MAVI-RENT</h1>
+              <h1 className="text-2xl font-bold cursor-pointer">RentEasy</h1>
             </Link>
             <nav className="hidden md:flex items-center gap-6">
               <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
