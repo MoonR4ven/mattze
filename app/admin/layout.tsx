@@ -2,14 +2,15 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { LayoutDashboard, Package, Calendar, Users, Settings, Menu, X } from "lucide-react"
+import { LayoutDashboard, Package, Calendar, Users, Settings, Menu, X, LogOut } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/contexts/auth-context"
 
 const navigation = [
   {
@@ -46,6 +47,31 @@ export default function AdminLayout({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
+  const { user, loading, signOut } = useAuth()
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login")
+    }
+  }, [user, loading, router])
+
+  const handleSignOut = async () => {
+    await signOut()
+    router.push("/login")
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">Loading...</div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -99,18 +125,22 @@ export default function AdminLayout({
           </nav>
 
           {/* Footer */}
-          <div className="p-4 border-t">
+          <div className="p-4 border-t space-y-2">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium">Admin User</p>
-                    <p className="text-xs text-muted-foreground">admin@example.com</p>
+                    <p className="text-xs text-muted-foreground">{user?.email}</p>
                   </div>
                   <Badge variant="secondary">Admin</Badge>
                 </div>
               </CardContent>
             </Card>
+            <Button variant="outline" className="w-full bg-transparent" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </Button>
           </div>
         </div>
       </div>
