@@ -14,19 +14,18 @@ interface Booking {
   orderId: string
   productId: string
   productName: string
-  date: Date | null
+  date: string
   startTime: string
   endTime: string
   customerEmail: string
   customerName: string
   status: string
   price: number
-  createdAt: Date | null
+  createdAt: string
   calendarEventId?: string
   calendarStatus?: string
   calendarError?: string
 }
-
 
 export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([])
@@ -36,31 +35,24 @@ export default function AdminBookingsPage() {
     fetchBookings()
   }, [])
 
-const fetchBookings = async () => {
-  try {
-    const bookingsRef = collection(db, "bookings")
-    const q = query(bookingsRef, orderBy("createdAt", "desc"))
-    const querySnapshot = await getDocs(q)
+  const fetchBookings = async () => {
+    try {
+      const bookingsRef = collection(db, "bookings")
+      const q = query(bookingsRef, orderBy("createdAt", "desc"))
+      const querySnapshot = await getDocs(q)
 
-    const bookingsData = querySnapshot.docs.map((doc) => {
-      const data = doc.data()
-      return {
+      const bookingsData = querySnapshot.docs.map((doc) => ({
         id: doc.id,
-        ...data,
-        // Normalize timestamps
-        date: data.date?.toDate ? data.date.toDate() : null,
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : null,
-      }
-    }) as Booking[]
+        ...doc.data(),
+      })) as Booking[]
 
-    setBookings(bookingsData)
-  } catch (error) {
-    console.error("Error fetching bookings:", error)
-  } finally {
-    setLoading(false)
+      setBookings(bookingsData)
+    } catch (error) {
+      console.error("Error fetching bookings:", error)
+    } finally {
+      setLoading(false)
+    }
   }
-}
-
 
   const handleBookingUpdate = (updatedBooking: Booking) => {
     setBookings((prev) => prev.map((booking) => (booking.id === updatedBooking.id ? updatedBooking : booking)))
@@ -126,7 +118,7 @@ const fetchBookings = async () => {
                       <div className="flex items-center gap-2 mt-1">
                         <Calendar className="h-4 w-4" />
                         <div>
-                          {booking.date ? format(new Date(booking.date), "MMM dd, yyyy") : "No date"}
+                          <div className="font-medium">{format(new Date(booking.date), "MMM dd, yyyy")}</div>
                           <div className="text-sm text-muted-foreground flex items-center gap-1">
                             <Clock className="h-3 w-3" />
                             {booking.startTime} - {booking.endTime}
