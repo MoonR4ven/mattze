@@ -6,20 +6,26 @@ import type { CartItem } from "@/lib/types"
 
 interface CartStore {
   items: CartItem[]
+  isOpen: boolean
   addToCart: (item: CartItem) => void
   removeFromCart: (id: string) => void
   updateQuantity: (id: string, quantity: number) => void
   clearCart: () => void
   getTotalPrice: () => number
   getTotalItems: () => number
+  toggleCart: () => void
+  openCart: () => void
+  closeCart: () => void
 }
 
 export const useCart = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
+      isOpen: false,
 
       addToCart: (item) => {
+        set({ isOpen: true })
         set((state) => {
           const existingItem = state.items.find(
             (i) =>
@@ -76,6 +82,18 @@ export const useCart = create<CartStore>()(
 
       getTotalItems: () => {
         return get().items.reduce((total, item) => total + item.quantity, 0)
+      },
+
+      toggleCart: () => {
+        set((state) => ({ isOpen: !state.isOpen }))
+      },
+
+      openCart: () => {
+        set({ isOpen: true })
+      },
+
+      closeCart: () => {
+        set({ isOpen: false })
       },
     }),
     {

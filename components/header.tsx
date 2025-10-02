@@ -59,12 +59,6 @@ export function Header() {
                 </>
               )}
             </Button>
-            <Link href="/cart">
-              <Button variant="outline" size="sm">
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                Cart ({totalItems})
-              </Button>
-            </Link>
           </div>
         </div>
       </div>
