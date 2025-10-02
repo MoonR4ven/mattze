@@ -5,7 +5,7 @@ import { db } from "@/lib/firebase"
 import { BillbeeAPI } from "@/lib/billbee"
 import { GoogleCalendarAPI } from "@/lib/google-calendar"
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_dummy_key_for_build", {
   apiVersion: "2024-06-20",
 })
 

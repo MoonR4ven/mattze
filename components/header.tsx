@@ -1,13 +1,26 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { ShoppingCart, User } from "lucide-react"
+import { ShoppingCart, User, LogOut } from "lucide-react"
 import { useCart } from "@/hooks/use-cart"
+import { useAuth } from "@/contexts/auth-context"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 export function Header() {
   const { getTotalItems } = useCart()
   const totalItems = getTotalItems()
+  const { user, signOut } = useAuth()
+  const router = useRouter()
+
+  const handleAuthAction = async () => {
+    if (user) {
+      await signOut()
+      router.push("/")
+    } else {
+      router.push("/login")
+    }
+  }
 
   return (
     <header className="border-b border-border bg-card">
@@ -21,9 +34,11 @@ export function Header() {
               <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
                 Products
               </Link>
-              <Link href="/admin/bookings" className="text-sm text-muted-foreground hover:text-foreground">
-                Admin
-              </Link>
+              {user && (
+                <Link href="/admin" className="text-sm text-muted-foreground hover:text-foreground">
+                  Admin
+                </Link>
+              )}
               <a href="#" className="text-sm text-muted-foreground hover:text-foreground">
                 Contact
               </a>
@@ -31,16 +46,19 @@ export function Header() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm">
-              <User className="h-4 w-4 mr-2" />
-              Login
+            <Button variant="ghost" size="sm" onClick={handleAuthAction}>
+              {user ? (
+                <>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </>
+              ) : (
+                <>
+                  <User className="h-4 w-4 mr-2" />
+                  Login
+                </>
+              )}
             </Button>
-            <Link href="/cart">
-              <Button variant="outline" size="sm">
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                Cart ({totalItems})
-              </Button>
-            </Link>
           </div>
         </div>
       </div>
