@@ -107,25 +107,25 @@ export default function ProductDetailPage() {
           Back
         </Button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Left Sidebar - Related Products */}
-          <div className="lg:col-span-3 order-2 lg:order-1">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+          {/* Left Sidebar - Related Products - Hidden on mobile, shown on large screens */}
+          <div className="hidden lg:block lg:col-span-3 order-2 lg:order-1">
             <div className="sticky top-24 space-y-6">
               <Card className="border-2 border-transparent hover:border-[rgb(var(--mavi-blue))]/20 transition-all">
-                <CardContent className="p-6">
-                  <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-[rgb(var(--mavi-blue))]" />
+                <CardContent className="p-4 lg:p-6">
+                  <h3 className="font-bold text-base lg:text-lg mb-4 flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 lg:h-5 lg:w-5 text-[rgb(var(--mavi-blue))] flex-shrink-0" />
                     Similar Products
                   </h3>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {relatedProducts.map((related) => (
                       <Link
                         key={related.id}
                         href={`/products/${related.id}`}
                         className="block group"
                       >
-                        <div className="flex gap-3 p-3 rounded-xl border-2 border-transparent hover:border-[rgb(var(--mavi-blue))]/30 transition-all">
-                          <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
+                        <div className="flex gap-3 p-2 lg:p-3 rounded-xl border-2 border-transparent hover:border-[rgb(var(--mavi-blue))]/30 transition-all">
+                          <div className="relative w-16 h-16 lg:w-20 lg:h-20 rounded-lg overflow-hidden flex-shrink-0">
                             <Image
                               src={related.image || `/placeholder.svg?height=80&width=80&text=${encodeURIComponent(related.name)}`}
                               alt={related.name}
@@ -134,10 +134,10 @@ export default function ProductDetailPage() {
                             />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-sm line-clamp-2 group-hover:text-[rgb(var(--mavi-blue))] transition-colors">
+                            <h4 className="font-semibold text-xs lg:text-sm line-clamp-2 group-hover:text-[rgb(var(--mavi-blue))] transition-colors">
                               {related.name}
                             </h4>
-                            <p className="text-sm text-[rgb(var(--mavi-blue))] font-bold mt-1">
+                            <p className="text-xs lg:text-sm text-[rgb(var(--mavi-blue))] font-bold mt-1">
                               €{related.price.toFixed(2)}/day
                             </p>
                           </div>
@@ -153,7 +153,7 @@ export default function ProductDetailPage() {
           {/* Main Content */}
           <div className="lg:col-span-6 order-1 lg:order-2">
             <Card className="border-2 border-transparent hover:border-[rgb(var(--mavi-blue))]/20 transition-all overflow-hidden animate-fade-in">
-              <div className="relative aspect-[16/10] overflow-hidden">
+              <div className="relative aspect-[4/3] sm:aspect-[16/10] overflow-hidden">
                 <Image
                   src={product.image || `/placeholder.svg?height=600&width=800&text=${encodeURIComponent(product.name)}`}
                   alt={product.name}
@@ -161,12 +161,12 @@ export default function ProductDetailPage() {
                   className="object-cover"
                   priority
                 />
-                <div className="absolute top-4 right-4">
+                <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
                   <Badge
                     variant={product.available ? "default" : "destructive"}
                     className={product.available
-                      ? "bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] border-0 shadow-lg"
-                      : ""
+                      ? "bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] border-0 shadow-lg text-xs sm:text-sm"
+                      : "text-xs sm:text-sm"
                     }
                   >
                     {product.available ? "Available" : "Currently Booked"}
@@ -174,18 +174,18 @@ export default function ProductDetailPage() {
                 </div>
               </div>
 
-              <CardContent className="p-8 space-y-6">
+              <CardContent className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
                 <div>
-                  <div className="flex items-start justify-between gap-4 mb-3">
-                    <h1 className="text-3xl md:text-4xl font-bold">{product.name}</h1>
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-3">
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold">{product.name}</h1>
                     <Badge
                       variant="secondary"
-                      className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 border-[rgb(var(--mavi-blue))]/20"
+                      className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 border-[rgb(var(--mavi-blue))]/20 w-fit"
                     >
                       {product.type}
                     </Badge>
                   </div>
-                  <p className="text-lg text-muted-foreground leading-relaxed">{product.description}</p>
+                  <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">{product.description}</p>
                 </div>
 
                 <Separator />
@@ -252,44 +252,44 @@ export default function ProductDetailPage() {
 
           {/* Right Sidebar - Booking */}
           <div className="lg:col-span-3 order-3">
-            <div className="sticky top-24">
+            <div className="lg:sticky lg:top-24">
               <Card className="border-2 border-[rgb(var(--mavi-blue))]/20 shadow-xl animate-fade-in">
-                <CardContent className="p-6 space-y-6">
+                <CardContent className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-2">Daily Rate</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-2">Daily Rate</p>
                     <div className="flex items-baseline gap-2">
-                      <Euro className="h-6 w-6 text-[rgb(var(--mavi-blue))]" />
-                      <span className="text-4xl font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
+                      <Euro className="h-5 w-5 sm:h-6 sm:w-6 text-[rgb(var(--mavi-blue))] flex-shrink-0" />
+                      <span className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
                         {product.price.toFixed(2)}
                       </span>
-                      <span className="text-muted-foreground">/day</span>
+                      <span className="text-sm sm:text-base text-muted-foreground">/day</span>
                     </div>
                   </div>
 
                   <Separator />
 
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-[rgb(var(--mavi-turquoise))]" />
+                  <div className="space-y-2 sm:space-y-3">
+                    <div className="flex items-center gap-2 text-xs sm:text-sm">
+                      <CheckCircle2 className="h-4 w-4 text-[rgb(var(--mavi-turquoise))] flex-shrink-0" />
                       <span>Free cancellation up to 24h</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-[rgb(var(--mavi-turquoise))]" />
+                    <div className="flex items-center gap-2 text-xs sm:text-sm">
+                      <CheckCircle2 className="h-4 w-4 text-[rgb(var(--mavi-turquoise))] flex-shrink-0" />
                       <span>Instant confirmation</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-[rgb(var(--mavi-turquoise))]" />
+                    <div className="flex items-center gap-2 text-xs sm:text-sm">
+                      <CheckCircle2 className="h-4 w-4 text-[rgb(var(--mavi-turquoise))] flex-shrink-0" />
                       <span>Professional support</span>
                     </div>
                   </div>
 
                   <Button
                     size="lg"
-                    className="w-full h-14 text-base font-semibold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all hover:scale-105 shadow-lg"
+                    className="w-full h-12 sm:h-14 text-sm sm:text-base font-semibold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all hover:scale-105 shadow-lg"
                     onClick={() => setShowBookingDialog(true)}
                     disabled={!product.available}
                   >
-                    <Calendar className="h-5 w-5 mr-2" />
+                    <Calendar className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                     {product.available ? "Book Now" : "Currently Unavailable"}
                   </Button>
 

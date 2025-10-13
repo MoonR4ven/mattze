@@ -167,42 +167,42 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-[900px] max-h-[95vh] overflow-hidden p-0 bg-background gap-0">
-        <div className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/5 via-transparent to-[rgb(var(--mavi-turquoise))]/5 px-6 py-4 border-b">
+      <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[900px] max-h-[95vh] overflow-hidden p-0 gap-0 bg-background border-2">
+        <div className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/5 via-transparent to-[rgb(var(--mavi-turquoise))]/5 px-4 sm:px-6 py-4 border-b bg-background">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-              <CalendarIcon className="h-6 w-6 text-[rgb(var(--mavi-blue))]" />
-              Book {product.name}
+            <DialogTitle className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6 text-[rgb(var(--mavi-blue))] flex-shrink-0" />
+              <span className="line-clamp-1">Book {product.name}</span>
             </DialogTitle>
-            <DialogDescription className="text-base mt-2">
+            <DialogDescription className="text-sm sm:text-base mt-2">
               Select your dates and quantity to see pricing
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <div className="grid md:grid-cols-[1fr_320px] h-full">
-          <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(95vh-180px)]">
+        <div className="flex flex-col md:grid md:grid-cols-[1fr_320px] h-full overflow-hidden bg-background">
+          <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto max-h-[calc(95vh-240px)] md:max-h-[calc(95vh-180px)] bg-background">
             <div className="space-y-4">
               <div>
                 <Label className="text-base font-semibold mb-3 flex items-center gap-2">
-                  <Info className="h-4 w-4 text-[rgb(var(--mavi-blue))]" />
+                  <Info className="h-4 w-4 text-[rgb(var(--mavi-blue))] flex-shrink-0" />
                   How many items?
                 </Label>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 sm:gap-4">
                   <Button
                     variant="outline"
                     size="icon"
                     onClick={() => handleQuantityChange(quantity - 1)}
                     disabled={quantity <= 1}
-                    className="h-12 w-12 rounded-xl border-2 hover:border-[rgb(var(--mavi-blue))] hover:bg-[rgb(var(--mavi-blue))]/10"
+                    className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl border-2 hover:border-[rgb(var(--mavi-blue))] hover:bg-[rgb(var(--mavi-blue))]/10 flex-shrink-0"
                   >
-                    <Minus className="h-5 w-5" />
+                    <Minus className="h-4 w-4 sm:h-5 sm:w-5" />
                   </Button>
                   <div className="flex-1 text-center">
-                    <div className="text-3xl font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
+                    <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
                       {quantity}
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-xs sm:text-sm text-muted-foreground">
                       {quantity === 1 ? 'item' : 'items'}
                     </div>
                   </div>
@@ -210,43 +210,43 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
                     variant="outline"
                     size="icon"
                     onClick={() => handleQuantityChange(quantity + 1)}
-                    className="h-12 w-12 rounded-xl border-2 hover:border-[rgb(var(--mavi-blue))] hover:bg-[rgb(var(--mavi-blue))]/10"
+                    className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl border-2 hover:border-[rgb(var(--mavi-blue))] hover:bg-[rgb(var(--mavi-blue))]/10 flex-shrink-0"
                   >
-                    <Plus className="h-5 w-5" />
+                    <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
                   </Button>
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-xl">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4 p-3 sm:p-4 bg-muted/50 rounded-xl">
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-[rgb(var(--mavi-blue))]"></div>
-                  <span className="text-sm font-medium">Selected</span>
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-[rgb(var(--mavi-blue))] flex-shrink-0"></div>
+                  <span className="text-xs sm:text-sm font-medium">Selected</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-green-500"></div>
-                  <span className="text-sm font-medium">Available</span>
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-green-500 flex-shrink-0"></div>
+                  <span className="text-xs sm:text-sm font-medium">Available</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-red-500/50"></div>
-                  <span className="text-sm font-medium">Unavailable</span>
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-red-500/50 flex-shrink-0"></div>
+                  <span className="text-xs sm:text-sm font-medium">Unavailable</span>
                 </div>
               </div>
             </div>
 
             <div>
-              <Label className="text-base font-semibold mb-4 flex items-center gap-2">
-                <CalendarIcon className="h-4 w-4 text-[rgb(var(--mavi-blue))]" />
+              <Label className="text-base font-semibold mb-3 sm:mb-4 flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4 text-[rgb(var(--mavi-blue))] flex-shrink-0" />
                 Select your dates
               </Label>
-              <p className="text-sm text-muted-foreground mb-4">
+              <p className="text-xs sm:text-sm text-muted-foreground mb-4">
                 Click a date to start, then click another to create a range. All dates must be available.
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {Array.from({ length: 2 }, (_, i) => {
                   const monthDate = addMonths(new Date(), i)
                   return (
-                    <div key={i} className="border-2 border-border rounded-2xl p-4 bg-card/50 hover:border-[rgb(var(--mavi-blue))]/30 transition-colors">
+                    <div key={i} className="border-2 border-border rounded-2xl p-3 sm:p-4 bg-card/50 hover:border-[rgb(var(--mavi-blue))]/30 transition-colors">
                       <Calendar
                         mode="single"
                         selected={startDate}
@@ -281,19 +281,19 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
                         classNames={{
                           month: "space-y-4 w-full",
                           caption: "flex justify-center pt-1 relative items-center mb-4",
-                          caption_label: "text-base font-semibold",
+                          caption_label: "text-sm sm:text-base font-semibold",
                           nav: "space-x-1 flex items-center",
                           nav_button:
-                            "h-8 w-8 bg-transparent p-0 hover:bg-[rgb(var(--mavi-blue))]/10 rounded-lg transition-colors",
+                            "h-7 w-7 sm:h-8 sm:w-8 bg-transparent p-0 hover:bg-[rgb(var(--mavi-blue))]/10 rounded-lg transition-colors",
                           nav_button_previous: "absolute left-1",
                           nav_button_next: "absolute right-1",
                           table: "w-full border-collapse",
                           head_row: "flex w-full",
                           head_cell:
-                            "text-muted-foreground rounded-md font-semibold text-xs flex-1 text-center uppercase",
+                            "text-muted-foreground rounded-md font-semibold text-[10px] sm:text-xs flex-1 text-center uppercase",
                           row: "flex w-full mt-1",
-                          cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 flex-1",
-                          day: "h-10 w-10 p-0 font-normal hover:bg-accent hover:text-accent-foreground rounded-lg transition-all mx-auto",
+                          cell: "relative p-0 text-center text-xs sm:text-sm focus-within:relative focus-within:z-20 flex-1",
+                          day: "h-8 w-8 sm:h-10 sm:w-10 p-0 font-normal hover:bg-accent hover:text-accent-foreground rounded-lg transition-all mx-auto",
                           day_today: "bg-accent/50 font-bold ring-2 ring-[rgb(var(--mavi-blue))]/30",
                           day_outside: "text-muted-foreground opacity-30",
                           day_disabled: "text-muted-foreground opacity-20 cursor-not-allowed",
@@ -307,10 +307,10 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
             </div>
           </div>
 
-          <div className="bg-gradient-to-b from-muted/30 to-muted/50 border-l p-6 flex flex-col">
-            <div className="flex-1 space-y-6">
+          <div className="bg-gradient-to-b from-muted/30 to-muted/50 border-t md:border-t-0 md:border-l p-4 sm:p-6 flex flex-col bg-background">
+            <div className="flex-1 space-y-4 sm:space-y-6">
               <div>
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                <h3 className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
                   Booking Summary
                 </h3>
                 <div className="space-y-3">
@@ -361,8 +361,8 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
 
                     <div className="p-3 bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 rounded-xl border border-[rgb(var(--mavi-blue))]/20">
                       <div className="flex justify-between items-center">
-                        <span className="font-semibold">Total Price</span>
-                        <span className="text-2xl font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
+                        <span className="font-semibold text-sm">Total Price</span>
+                        <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
                           €{totalPrice.toFixed(2)}
                         </span>
                       </div>
@@ -382,21 +382,21 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
               )}
             </div>
 
-            <div className="pt-6 space-y-3">
+            <div className="pt-4 sm:pt-6 space-y-2 sm:space-y-3">
               <Button
                 onClick={handleConfirm}
                 disabled={!startDate || !endDate}
                 size="lg"
-                className="w-full h-12 text-base font-semibold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full h-11 sm:h-12 text-sm sm:text-base font-semibold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <ShoppingCart className="h-5 w-5 mr-2" />
+                <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                 Add to Cart
               </Button>
 
               <Button
                 variant="ghost"
                 onClick={() => handleOpenChange(false)}
-                className="w-full"
+                className="w-full text-sm"
               >
                 Cancel
               </Button>
