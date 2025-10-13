@@ -6,7 +6,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -14,7 +13,8 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Label } from "@/components/ui/label"
 import { format, addDays, isBefore, startOfDay, differenceInDays, addMonths } from "date-fns"
-import { CalendarIcon, CheckCircle2, Minus, Plus } from "lucide-react"
+import { CalendarIcon, Minus, Plus, ShoppingCart, Info, CheckCircle2 } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
 
 interface TimeBookingDialogProps {
   product: Product
@@ -44,42 +44,11 @@ const mockBookings: Booking[] = [
     status: "confirmed",
     price: 30.0,
   },
-  {
-    productId: "10010",
-    productName: "Cover set white",
-    startTime: "2025-02-01",
-    endTime: "2025-02-03",
-    customerEmail: "alex@example.com",
-    customerName: "Alex Brown",
-    status: "confirmed",
-    price: 30.0,
-  },
-  {
-    productId: "10011",
-    productName: "Elegant table runner",
-    startTime: "2025-01-18",
-    endTime: "2025-01-19",
-    customerEmail: "john@example.com",
-    customerName: "John Doe",
-    status: "confirmed",
-    price: 15.0,
-  },
-  {
-    productId: "10012",
-    productName: "Crystal wine glasses",
-    startTime: "2025-02-14",
-    endTime: "2025-02-16",
-    customerEmail: "emma@example.com",
-    customerName: "Emma Davis",
-    status: "confirmed",
-    price: 45.0,
-  },
 ]
 
 const getProductAvailability = (productId: string, date: Date, requestedQuantity: number): boolean => {
   const dateString = format(date, "yyyy-MM-dd")
 
-  // Count how many items of this product are already booked on this date
   const bookedQuantity = mockBookings.filter((booking) => {
     if (booking.productId !== productId || booking.status !== "confirmed") {
       return false
@@ -89,11 +58,9 @@ const getProductAvailability = (productId: string, date: Date, requestedQuantity
     const bookingEnd = new Date(booking.endTime)
     const checkDate = new Date(dateString)
 
-    // Check if the date is within the booking range (inclusive)
     return checkDate >= bookingStart && checkDate <= bookingEnd
   }).length
 
-  // Assume we have a maximum of 10 items per product type (this could be dynamic)
   const maxAvailable = 10
   const availableQuantity = maxAvailable - bookedQuantity
 
@@ -102,7 +69,6 @@ const getProductAvailability = (productId: string, date: Date, requestedQuantity
 
 export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: TimeBookingDialogProps) {
   const [selectedDates, setSelectedDates] = useState<Date[]>([])
-  const [selectionMode, setSelectionMode] = useState<"single" | "range">("single")
   const [quantity, setQuantity] = useState(1)
 
   const startDate = selectedDates.length > 0 ? selectedDates[0] : undefined
@@ -127,7 +93,6 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       setSelectedDates([])
-      setSelectionMode("single")
       setQuantity(1)
     }
     onOpenChange(open)
@@ -136,59 +101,49 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
   const handleDateSelect = (date: Date | undefined) => {
     if (!date || !isDateAvailable(date)) return
 
-    if (selectionMode === "single") {
+    if (selectedDates.length === 0) {
       setSelectedDates([date])
-    } else {
-      // Range mode - handle consecutive day selection
-      if (selectedDates.length === 0) {
-        setSelectedDates([date])
-      } else if (selectedDates.length === 1) {
-        const firstDate = selectedDates[0]
-        const daysDiff = differenceInDays(date, firstDate)
+    } else if (selectedDates.length === 1) {
+      const firstDate = selectedDates[0]
+      const daysDiff = differenceInDays(date, firstDate)
 
-        if (daysDiff === 0) {
-          // Same date clicked, keep single selection
-          setSelectedDates([date])
-        } else if (daysDiff > 0) {
-          // Create range from first date to selected date
-          const range = []
-          let allAvailable = true
-          for (let i = 0; i <= daysDiff; i++) {
-            const checkDate = addDays(firstDate, i)
-            if (!isDateAvailable(checkDate)) {
-              allAvailable = false
-              break
-            }
-            range.push(checkDate)
+      if (daysDiff === 0) {
+        setSelectedDates([date])
+      } else if (daysDiff > 0) {
+        const range = []
+        let allAvailable = true
+        for (let i = 0; i <= daysDiff; i++) {
+          const checkDate = addDays(firstDate, i)
+          if (!isDateAvailable(checkDate)) {
+            allAvailable = false
+            break
           }
-          if (allAvailable) {
-            setSelectedDates(range)
-          } else {
-            // If any date in range is unavailable, start new selection
-            setSelectedDates([date])
-          }
+          range.push(checkDate)
+        }
+        if (allAvailable) {
+          setSelectedDates(range)
         } else {
-          // Selected date is before first date, create range backwards
-          const range = []
-          let allAvailable = true
-          for (let i = 0; i <= Math.abs(daysDiff); i++) {
-            const checkDate = addDays(date, i)
-            if (!isDateAvailable(checkDate)) {
-              allAvailable = false
-              break
-            }
-            range.push(checkDate)
-          }
-          if (allAvailable) {
-            setSelectedDates(range)
-          } else {
-            setSelectedDates([date])
-          }
+          setSelectedDates([date])
         }
       } else {
-        // Start new selection
-        setSelectedDates([date])
+        const range = []
+        let allAvailable = true
+        for (let i = 0; i <= Math.abs(daysDiff); i++) {
+          const checkDate = addDays(date, i)
+          if (!isDateAvailable(checkDate)) {
+            allAvailable = false
+            break
+          }
+          range.push(checkDate)
+        }
+        if (allAvailable) {
+          setSelectedDates(range)
+        } else {
+          setSelectedDates([date])
+        }
       }
+    } else {
+      setSelectedDates([date])
     }
   }
 
@@ -199,7 +154,6 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
   const handleQuantityChange = (newQuantity: number) => {
     if (newQuantity < 1) return
     setQuantity(newQuantity)
-    // Clear selected dates if they're no longer available with new quantity
     if (selectedDates.length > 0) {
       const stillAvailable = selectedDates.every((date) => getProductAvailability(product.id, date, newQuantity))
       if (!stillAvailable) {
@@ -209,239 +163,245 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
   }
 
   const totalPrice = product.price * numberOfDays * quantity
+  const pricePerDay = product.price * quantity
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[1200px] max-h-[90vh] overflow-y-auto p-0 bg-background">
-        <div className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/10 via-[rgb(var(--mavi-turquoise))]/5 to-transparent p-6 border-b">
-          <DialogHeader className="space-y-3">
-            <DialogTitle className="flex items-center gap-3 text-xl">
-              <div className="p-2 bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 rounded-lg">
-                <CalendarIcon className="h-5 w-5 text-[rgb(var(--mavi-blue))]" />
-              </div>
+      <DialogContent className="max-w-[900px] max-h-[95vh] overflow-hidden p-0 bg-background gap-0">
+        <div className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/5 via-transparent to-[rgb(var(--mavi-turquoise))]/5 px-6 py-4 border-b">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+              <CalendarIcon className="h-6 w-6 text-[rgb(var(--mavi-blue))]" />
               Book {product.name}
             </DialogTitle>
-            <DialogDescription className="text-base">
-              Select your rental period • €{product.price.toFixed(2)} per day per item
+            <DialogDescription className="text-base mt-2">
+              Select your dates and quantity to see pricing
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <div className="p-6">
-          <div className="grid lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
+        <div className="grid md:grid-cols-[1fr_320px] h-full">
+          <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(95vh-180px)]">
+            <div className="space-y-4">
               <div>
-                <Label className="text-base font-medium mb-3 block">Quantity</Label>
-                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg w-fit">
+                <Label className="text-base font-semibold mb-3 flex items-center gap-2">
+                  <Info className="h-4 w-4 text-[rgb(var(--mavi-blue))]" />
+                  How many items?
+                </Label>
+                <div className="flex items-center gap-4">
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="icon"
                     onClick={() => handleQuantityChange(quantity - 1)}
                     disabled={quantity <= 1}
-                    className="h-8 w-8 p-0"
+                    className="h-12 w-12 rounded-xl border-2 hover:border-[rgb(var(--mavi-blue))] hover:bg-[rgb(var(--mavi-blue))]/10"
                   >
-                    <Minus className="h-4 w-4" />
+                    <Minus className="h-5 w-5" />
                   </Button>
-                  <span className="text-lg font-medium min-w-[3rem] text-center">
-                    {quantity} item{quantity > 1 ? "s" : ""}
-                  </span>
+                  <div className="flex-1 text-center">
+                    <div className="text-3xl font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
+                      {quantity}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {quantity === 1 ? 'item' : 'items'}
+                    </div>
+                  </div>
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="icon"
                     onClick={() => handleQuantityChange(quantity + 1)}
-                    className="h-8 w-8 p-0"
+                    className="h-12 w-12 rounded-xl border-2 hover:border-[rgb(var(--mavi-blue))] hover:bg-[rgb(var(--mavi-blue))]/10"
                   >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Availability is checked for all {quantity} item{quantity > 1 ? "s" : ""} of this product
-                </p>
-              </div>
-
-              <div>
-                <Label className="text-base font-medium mb-3 block">Selection Mode</Label>
-                <div className="flex gap-2 p-1 bg-muted rounded-lg">
-                  <Button
-                    variant={selectionMode === "single" ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => {
-                      setSelectionMode("single")
-                      setSelectedDates(selectedDates.slice(0, 1))
-                    }}
-                    className="flex-1"
-                  >
-                    Single Day
-                  </Button>
-                  <Button
-                    variant={selectionMode === "range" ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setSelectionMode("range")}
-                    className="flex-1"
-                  >
-                    Multiple Days
+                    <Plus className="h-5 w-5" />
                   </Button>
                 </div>
               </div>
 
-              <div>
-                <Label className="text-base font-medium mb-3 block">
-                  {selectionMode === "single" ? "Select Date" : "Select Date Range"}
-                </Label>
-
-                <div className="flex gap-4 mb-4 p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-sm text-muted-foreground">
-                      Available ({quantity} item{quantity > 1 ? "s" : ""})
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span className="text-sm text-muted-foreground">Unavailable</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-primary rounded-full"></div>
-                    <span className="text-sm text-muted-foreground">Selected</span>
-                  </div>
+              <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-[rgb(var(--mavi-blue))]"></div>
+                  <span className="text-sm font-medium">Selected</span>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {Array.from({ length: 6 }, (_, i) => {
-                    const monthDate = addMonths(new Date(), i)
-                    return (
-                      <div key={i} className="border rounded-xl p-4 bg-card">
-                        <Calendar
-                          mode="single"
-                          selected={startDate}
-                          onSelect={handleDateSelect}
-                          disabled={isDateDisabled}
-                          className="w-full"
-                          month={monthDate}
-                          fromDate={new Date()}
-                          toDate={addMonths(new Date(), 12)}
-                          modifiers={{
-                            selected: isDateSelected,
-                            available: (date) => isDateAvailable(date) && !isDateSelected(date),
-                            unavailable: (date) => !isDateAvailable(date) && !isDateDisabled(date),
-                            range_middle: (date) => {
-                              if (selectedDates.length <= 2) return false
-                              return selectedDates
-                                .slice(1, -1)
-                                .some(
-                                  (selectedDate) => format(selectedDate, "yyyy-MM-dd") === format(date, "yyyy-MM-dd"),
-                                )
-                            },
-                          }}
-                          modifiersClassNames={{
-                            selected:
-                              "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
-                            available:
-                              "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50",
-                            unavailable:
-                              "bg-red-100 text-red-800 cursor-not-allowed dark:bg-red-900/30 dark:text-red-400",
-                            range_middle: "bg-primary/20 text-primary hover:bg-primary/30",
-                          }}
-                          classNames={{
-                            month: "space-y-4 w-full",
-                            caption: "flex justify-center pt-1 relative items-center",
-                            caption_label: "text-sm font-medium",
-                            nav: "space-x-1 flex items-center",
-                            nav_button:
-                              "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 hover:bg-accent rounded-md",
-                            nav_button_previous: "absolute left-1",
-                            nav_button_next: "absolute right-1",
-                            table: "w-full border-collapse space-y-1",
-                            head_row: "flex w-full",
-                            head_cell:
-                              "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem] flex-1 text-center",
-                            row: "flex w-full mt-2",
-                            cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 flex-1",
-                            day: "h-8 w-8 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground rounded-md transition-colors mx-auto",
-                            day_today: "bg-accent text-accent-foreground font-medium ring-2 ring-primary/20",
-                            day_outside: "text-muted-foreground opacity-30",
-                            day_disabled: "text-muted-foreground opacity-30 cursor-not-allowed",
-                            day_hidden: "invisible",
-                          }}
-                        />
-                      </div>
-                    )
-                  })}
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-green-500"></div>
+                  <span className="text-sm font-medium">Available</span>
                 </div>
-
-                <p className="text-sm text-muted-foreground mt-4">
-                  {selectionMode === "single"
-                    ? `Click on a green (available) date to select it for rental. Green dates have ${quantity} or more items available.`
-                    : `Click on a start date, then click on an end date to select a range. All dates in the range must have ${quantity} or more items available.`}
-                </p>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-red-500/50"></div>
+                  <span className="text-sm font-medium">Unavailable</span>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-6">
-              {startDate && endDate && (
-                <div className="space-y-4">
-                  <Label className="text-base font-medium">Booking Summary</Label>
-                  <div className="p-6 bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 rounded-xl border border-[rgb(var(--mavi-blue))]/20">
-                    <div className="space-y-4">
+            <div>
+              <Label className="text-base font-semibold mb-4 flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4 text-[rgb(var(--mavi-blue))]" />
+                Select your dates
+              </Label>
+              <p className="text-sm text-muted-foreground mb-4">
+                Click a date to start, then click another to create a range. All dates must be available.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {Array.from({ length: 2 }, (_, i) => {
+                  const monthDate = addMonths(new Date(), i)
+                  return (
+                    <div key={i} className="border-2 border-border rounded-2xl p-4 bg-card/50 hover:border-[rgb(var(--mavi-blue))]/30 transition-colors">
+                      <Calendar
+                        mode="single"
+                        selected={startDate}
+                        onSelect={handleDateSelect}
+                        disabled={isDateDisabled}
+                        className="w-full"
+                        month={monthDate}
+                        fromDate={new Date()}
+                        toDate={addMonths(new Date(), 12)}
+                        modifiers={{
+                          selected: isDateSelected,
+                          available: (date) => isDateAvailable(date) && !isDateSelected(date),
+                          unavailable: (date) => !isDateAvailable(date) && !isDateDisabled(date),
+                          range_middle: (date) => {
+                            if (selectedDates.length <= 2) return false
+                            return selectedDates
+                              .slice(1, -1)
+                              .some(
+                                (selectedDate) => format(selectedDate, "yyyy-MM-dd") === format(date, "yyyy-MM-dd"),
+                              )
+                          },
+                        }}
+                        modifiersClassNames={{
+                          selected:
+                            "bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] text-white hover:opacity-90 font-bold",
+                          available:
+                            "bg-green-100 text-green-900 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50 font-medium",
+                          unavailable:
+                            "bg-red-100/50 text-red-400 cursor-not-allowed dark:bg-red-900/20 dark:text-red-500 line-through",
+                          range_middle: "bg-[rgb(var(--mavi-blue))]/20 text-[rgb(var(--mavi-blue))] hover:bg-[rgb(var(--mavi-blue))]/30 font-semibold",
+                        }}
+                        classNames={{
+                          month: "space-y-4 w-full",
+                          caption: "flex justify-center pt-1 relative items-center mb-4",
+                          caption_label: "text-base font-semibold",
+                          nav: "space-x-1 flex items-center",
+                          nav_button:
+                            "h-8 w-8 bg-transparent p-0 hover:bg-[rgb(var(--mavi-blue))]/10 rounded-lg transition-colors",
+                          nav_button_previous: "absolute left-1",
+                          nav_button_next: "absolute right-1",
+                          table: "w-full border-collapse",
+                          head_row: "flex w-full",
+                          head_cell:
+                            "text-muted-foreground rounded-md font-semibold text-xs flex-1 text-center uppercase",
+                          row: "flex w-full mt-1",
+                          cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 flex-1",
+                          day: "h-10 w-10 p-0 font-normal hover:bg-accent hover:text-accent-foreground rounded-lg transition-all mx-auto",
+                          day_today: "bg-accent/50 font-bold ring-2 ring-[rgb(var(--mavi-blue))]/30",
+                          day_outside: "text-muted-foreground opacity-30",
+                          day_disabled: "text-muted-foreground opacity-20 cursor-not-allowed",
+                          day_hidden: "invisible",
+                        }}
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-b from-muted/30 to-muted/50 border-l p-6 flex flex-col">
+            <div className="flex-1 space-y-6">
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                  Booking Summary
+                </h3>
+                <div className="space-y-3">
+                  {quantity && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Quantity</span>
+                      <span className="font-semibold">{quantity} {quantity === 1 ? 'item' : 'items'}</span>
+                    </div>
+                  )}
+
+                  {startDate && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Start Date</span>
+                      <span className="font-semibold">{format(startDate, "MMM dd, yyyy")}</span>
+                    </div>
+                  )}
+
+                  {endDate && selectedDates.length > 1 && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">End Date</span>
+                      <span className="font-semibold">{format(endDate, "MMM dd, yyyy")}</span>
+                    </div>
+                  )}
+
+                  {numberOfDays > 0 && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Duration</span>
+                      <span className="font-semibold">{numberOfDays} {numberOfDays === 1 ? 'day' : 'days'}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {numberOfDays > 0 && (
+                <>
+                  <Separator />
+
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Price per day</span>
+                      <span className="font-semibold">€{product.price.toFixed(2)}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Daily total</span>
+                      <span className="font-semibold">€{pricePerDay.toFixed(2)}</span>
+                    </div>
+
+                    <div className="p-3 bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 rounded-xl border border-[rgb(var(--mavi-blue))]/20">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Quantity</span>
-                        <span className="font-medium">
-                          {quantity} item{quantity > 1 ? "s" : ""}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Start Date</span>
-                        <span className="font-medium">{format(startDate, "MMM dd, yyyy")}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">End Date</span>
-                        <span className="font-medium">{format(endDate, "MMM dd, yyyy")}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Duration</span>
-                        <span className="font-medium">
-                          {numberOfDays} day{numberOfDays > 1 ? "s" : ""}
-                        </span>
-                      </div>
-                      <div className="h-px bg-border"></div>
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium">Total Price</span>
+                        <span className="font-semibold">Total Price</span>
                         <span className="text-2xl font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
                           €{totalPrice.toFixed(2)}
                         </span>
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        €{product.price.toFixed(2)} × {quantity} item{quantity > 1 ? "s" : ""} × {numberOfDays} day
-                        {numberOfDays > 1 ? "s" : ""}
+                      <div className="text-xs text-muted-foreground mt-1">
+                        €{product.price.toFixed(2)} × {quantity} × {numberOfDays} {numberOfDays === 1 ? 'day' : 'days'}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 mt-4 p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      <span className="text-sm text-green-700 dark:text-green-400 font-medium">
-                        {quantity} item{quantity > 1 ? "s" : ""} available for selected period
+                    <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-950/30 rounded-xl border border-green-200 dark:border-green-800">
+                      <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                      <span className="text-xs text-green-700 dark:text-green-300 font-medium">
+                        Available for your selected dates
                       </span>
                     </div>
                   </div>
-                </div>
+                </>
               )}
             </div>
-          </div>
-        </div>
 
-        <div className="p-6 border-t bg-muted/30">
-          <DialogFooter className="gap-3">
-            <Button variant="outline" onClick={() => handleOpenChange(false)} className="px-6">
-              Cancel
-            </Button>
-            <Button
-              onClick={handleConfirm}
-              disabled={!startDate || !endDate}
-              className="px-6 bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all"
-            >
-              Confirm Booking • €{totalPrice.toFixed(2)}
-            </Button>
-          </DialogFooter>
+            <div className="pt-6 space-y-3">
+              <Button
+                onClick={handleConfirm}
+                disabled={!startDate || !endDate}
+                size="lg"
+                className="w-full h-12 text-base font-semibold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ShoppingCart className="h-5 w-5 mr-2" />
+                Add to Cart
+              </Button>
+
+              <Button
+                variant="ghost"
+                onClick={() => handleOpenChange(false)}
+                className="w-full"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
