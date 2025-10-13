@@ -5,7 +5,7 @@ import type { Product } from "@/lib/types"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Calendar } from "lucide-react"
+import { Calendar, Euro } from "lucide-react"
 import Image from "next/image"
 import { useCart } from "@/hooks/use-cart"
 import { TimeBookingDialog } from "./time-booking-dialog"
@@ -28,7 +28,6 @@ export function ProductCard({ product }: ProductCardProps) {
       endDate,
       numberOfDays: days,
       totalPrice,
-      // Keep legacy fields for backward compatibility
       selectedDate: startDate,
       selectedTime: undefined,
     })
@@ -37,36 +36,74 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <>
-      <Card className="group hover:shadow-lg transition-all duration-200 border-border bg-card">
+      <Card className="group hover-lift overflow-hidden border-2 border-transparent hover:border-[rgb(var(--mavi-blue))]/20 transition-all h-full flex flex-col">
         <CardHeader className="p-0">
-          <div className="relative aspect-[4/3] overflow-hidden rounded-t-lg">
+          <div className="relative aspect-[4/3] overflow-hidden">
             <Image
               src={product.image || `/placeholder.svg?height=300&width=400&text=${encodeURIComponent(product.name)}`}
               alt={product.name}
               fill
-              className="object-cover group-hover:scale-105 transition-transform duration-200"
+              className="object-cover transition-transform duration-500 group-hover:scale-110"
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             {product.available && (
-              <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground">Available</Badge>
+              <Badge className="absolute top-4 right-4 bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] border-0 shadow-lg backdrop-blur-sm">
+                Available
+              </Badge>
             )}
           </div>
         </CardHeader>
 
-        <CardContent className="p-4">
-          <div className="space-y-2">
-            <h3 className="font-semibold text-lg text-card-foreground line-clamp-2">{product.name}</h3>
-            {product.description && <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>}
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-bold text-primary">€{product.price.toFixed(2)}/day</span>
-              <Badge variant="secondary" className="text-xs">
+        <CardContent className="p-6 flex-1 flex flex-col">
+          <div className="space-y-3 flex-1">
+            <div>
+              <h3 className="font-bold text-xl mb-2 line-clamp-2 group-hover:text-[rgb(var(--mavi-blue))] transition-colors">
+                {product.name}
+              </h3>
+              {product.description && (
+                <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
+              )}
+            </div>
+
+            {(product.dimensions || product.capacity) && (
+              <div className="flex gap-2 flex-wrap">
+                {product.dimensions && (
+                  <Badge variant="outline" className="text-xs">
+                    {product.dimensions}
+                  </Badge>
+                )}
+                {product.capacity && (
+                  <Badge variant="outline" className="text-xs">
+                    {product.capacity}
+                  </Badge>
+                )}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center gap-2">
+                <Euro className="h-5 w-5 text-[rgb(var(--mavi-blue))]" />
+                <span className="font-bold text-2xl bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
+                  {product.price.toFixed(2)}
+                </span>
+                <span className="text-sm text-muted-foreground">/day</span>
+              </div>
+              <Badge
+                variant="secondary"
+                className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 border-[rgb(var(--mavi-blue))]/20 text-xs"
+              >
                 {product.type}
               </Badge>
             </div>
           </div>
         </CardContent>
 
-        <CardFooter className="p-4 pt-0">
-          <Button className="w-full" onClick={() => setShowBookingDialog(true)} disabled={!product.available}>
+        <CardFooter className="p-6 pt-0">
+          <Button
+            className="w-full bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all hover:scale-105 shadow-lg"
+            onClick={() => setShowBookingDialog(true)}
+            disabled={!product.available}
+          >
             <Calendar className="h-4 w-4 mr-2" />
             Book Now
           </Button>
