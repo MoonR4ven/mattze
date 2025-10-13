@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Plus, Edit, Trash2, Package, Euro, X } from "lucide-react"
+import { Plus, Edit, Trash2, Package, Euro, X, Sparkles, TrendingUp } from "lucide-react"
 import { toast } from "sonner"
 import Image from "next/image"
 
@@ -70,6 +70,7 @@ export default function AdminProductsPage() {
   const [newFeature, setNewFeature] = useState("")
   const [newSpecKey, setNewSpecKey] = useState("")
   const [newSpecValue, setNewSpecValue] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
     fetchProducts()
@@ -206,273 +207,395 @@ export default function AdminProductsPage() {
     })
   }
 
+  const filteredProducts = products.filter(
+    (product) =>
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.type.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Loading products...</div>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+        <div className="container mx-auto px-4 py-12">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center space-y-4 animate-fade-in">
+              <div className="w-16 h-16 mx-auto border-4 border-[rgb(var(--mavi-blue))] border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-muted-foreground">Loading products...</p>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Product Management</h1>
-          <p className="text-muted-foreground">Manage your rental inventory</p>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="container mx-auto px-4 py-12">
+        <div className="mb-12 space-y-8 animate-slide-up">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-2xl bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 border border-[rgb(var(--mavi-blue))]/20">
+                  <Package className="h-8 w-8 text-[rgb(var(--mavi-blue))]" />
+                </div>
+                <div>
+                  <h1 className="text-4xl font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
+                    Product Management
+                  </h1>
+                  <p className="text-muted-foreground flex items-center gap-2 mt-1">
+                    <TrendingUp className="h-4 w-4" />
+                    Manage your rental inventory
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  onClick={() => setIsDialogOpen(true)}
+                  size="lg"
+                  className="bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all hover:scale-105 shadow-lg hover:shadow-xl"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Add Product
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto animate-scale-in">
+                <DialogHeader>
+                  <DialogTitle className="text-2xl flex items-center gap-2">
+                    <Sparkles className="h-6 w-6 text-[rgb(var(--mavi-blue))]" />
+                    {editingProduct ? "Edit Product" : "Add New Product"}
+                  </DialogTitle>
+                </DialogHeader>
+
+                <form onSubmit={handleSubmit} className="space-y-6 mt-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="name" className="text-sm font-semibold">
+                        Product Name
+                      </Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => handleInputChange("name", e.target.value)}
+                        placeholder="e.g., Partyzelt 5x5m"
+                        required
+                        className="h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="type" className="text-sm font-semibold">
+                        Category
+                      </Label>
+                      <Select value={formData.type} onValueChange={(value) => handleInputChange("type", value)}>
+                        <SelectTrigger className="h-12">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {productTypes.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="description" className="text-sm font-semibold">
+                      Description
+                    </Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => handleInputChange("description", e.target.value)}
+                      placeholder="Enter detailed product description"
+                      rows={4}
+                      required
+                      className="transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="price" className="text-sm font-semibold">
+                        Daily Price (€)
+                      </Label>
+                      <Input
+                        id="price"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.price}
+                        onChange={(e) => handleInputChange("price", Number.parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
+                        required
+                        className="h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="dimensions" className="text-sm font-semibold">
+                        Dimensions
+                      </Label>
+                      <Input
+                        id="dimensions"
+                        value={formData.dimensions}
+                        onChange={(e) => handleInputChange("dimensions", e.target.value)}
+                        placeholder="e.g., 5x5m"
+                        className="h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="capacity" className="text-sm font-semibold">
+                        Capacity
+                      </Label>
+                      <Input
+                        id="capacity"
+                        value={formData.capacity}
+                        onChange={(e) => handleInputChange("capacity", e.target.value)}
+                        placeholder="e.g., 50 persons"
+                        className="h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="image" className="text-sm font-semibold">
+                        Image URL
+                      </Label>
+                      <Input
+                        id="image"
+                        value={formData.image}
+                        onChange={(e) => handleInputChange("image", e.target.value)}
+                        placeholder="Enter image URL"
+                        className="h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="available" className="text-sm font-semibold">
+                        Availability
+                      </Label>
+                      <Select
+                        value={formData.available.toString()}
+                        onValueChange={(value) => handleInputChange("available", value === "true")}
+                      >
+                        <SelectTrigger className="h-12">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="true">Available</SelectItem>
+                          <SelectItem value="false">Unavailable</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 p-6 rounded-2xl bg-gradient-to-br from-muted/50 to-muted/20 border border-border">
+                    <Label className="text-sm font-semibold flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-[rgb(var(--mavi-turquoise))]" />
+                      Specifications
+                    </Label>
+                    <div className="space-y-2">
+                      {Object.entries(formData.specifications).map(([key, value]) => (
+                        <div
+                          key={key}
+                          className="flex items-center gap-3 p-3 bg-card rounded-xl border border-border hover:border-[rgb(var(--mavi-blue))]/30 transition-all"
+                        >
+                          <span className="font-medium text-sm flex-1">{key}:</span>
+                          <span className="text-sm flex-1 text-muted-foreground">{value}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeSpecification(key)}
+                            className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-3">
+                      <Input
+                        placeholder="Key (e.g., Material)"
+                        value={newSpecKey}
+                        onChange={(e) => setNewSpecKey(e.target.value)}
+                        onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSpecification())}
+                        className="flex-1"
+                      />
+                      <Input
+                        placeholder="Value (e.g., PVC-Plane 750 N)"
+                        value={newSpecValue}
+                        onChange={(e) => setNewSpecValue(e.target.value)}
+                        onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSpecification())}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={addSpecification}
+                        className="hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] hover:border-[rgb(var(--mavi-blue))]"
+                      >
+                        Add
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 p-6 rounded-2xl bg-gradient-to-br from-muted/50 to-muted/20 border border-border">
+                    <Label className="text-sm font-semibold flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-[rgb(var(--mavi-turquoise))]" />
+                      Features
+                    </Label>
+                    <div className="space-y-2">
+                      {formData.features.map((feature, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-3 p-3 bg-card rounded-xl border border-border hover:border-[rgb(var(--mavi-blue))]/30 transition-all"
+                        >
+                          <span className="text-sm flex-1">{feature}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeFeature(index)}
+                            className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-3">
+                      <Input
+                        placeholder="Add a feature (e.g., UV-Schutz: 50 nach EN 13758-1)"
+                        value={newFeature}
+                        onChange={(e) => setNewFeature(e.target.value)}
+                        onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addFeature())}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={addFeature}
+                        className="hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] hover:border-[rgb(var(--mavi-blue))]"
+                      >
+                        Add
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-6 border-t">
+                    <Button type="button" variant="outline" onClick={handleCloseDialog} size="lg">
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting}
+                      size="lg"
+                      className="bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all"
+                    >
+                      {isSubmitting ? "Saving..." : editingProduct ? "Update Product" : "Add Product"}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <div className="max-w-md">
+            <Input
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
+            />
+          </div>
         </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setIsDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingProduct ? "Edit Product" : "Add New Product"}</DialogTitle>
-            </DialogHeader>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Product Name</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange("name", e.target.value)}
-                    placeholder="e.g., Partyzelt 5x5m"
-                    required
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {filteredProducts.map((product, index) => (
+            <Card
+              key={product.id}
+              className="group hover-lift overflow-hidden border-2 border-transparent hover:border-[rgb(var(--mavi-blue))]/20 transition-all animate-fade-in"
+              style={{ animationDelay: `${index * 50}ms` }}
+            >
+              <CardHeader className="p-0">
+                <div className="relative aspect-[4/3] overflow-hidden">
+                  <Image
+                    src={
+                      product.image || `/placeholder.svg?height=300&width=400&text=${encodeURIComponent(product.name)}`
+                    }
+                    alt={product.name}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="absolute top-4 right-4">
+                    <Badge
+                      variant={product.available ? "default" : "destructive"}
+                      className="shadow-lg backdrop-blur-sm"
+                    >
+                      {product.available ? "Available" : "Unavailable"}
+                    </Badge>
+                  </div>
                 </div>
+              </CardHeader>
 
-                <div className="space-y-2">
-                  <Label htmlFor="type">Category</Label>
-                  <Select value={formData.type} onValueChange={(value) => handleInputChange("type", value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {productTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => handleInputChange("description", e.target.value)}
-                  placeholder="Enter detailed product description"
-                  rows={4}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="price">Daily Price (€)</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={(e) => handleInputChange("price", Number.parseFloat(e.target.value) || 0)}
-                    placeholder="0.00"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="dimensions">Dimensions</Label>
-                  <Input
-                    id="dimensions"
-                    value={formData.dimensions}
-                    onChange={(e) => handleInputChange("dimensions", e.target.value)}
-                    placeholder="e.g., 5x5m"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="capacity">Capacity</Label>
-                  <Input
-                    id="capacity"
-                    value={formData.capacity}
-                    onChange={(e) => handleInputChange("capacity", e.target.value)}
-                    placeholder="e.g., 50 persons standing"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="image">Image URL</Label>
-                  <Input
-                    id="image"
-                    value={formData.image}
-                    onChange={(e) => handleInputChange("image", e.target.value)}
-                    placeholder="Enter image URL"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="available">Availability</Label>
-                  <Select
-                    value={formData.available.toString()}
-                    onValueChange={(value) => handleInputChange("available", value === "true")}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="true">Available</SelectItem>
-                      <SelectItem value="false">Unavailable</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <Label>Specifications</Label>
-                <div className="space-y-2">
-                  {Object.entries(formData.specifications).map(([key, value]) => (
-                    <div key={key} className="flex items-center gap-2 p-2 bg-muted rounded-md">
-                      <span className="font-medium text-sm flex-1">{key}:</span>
-                      <span className="text-sm flex-1">{value}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeSpecification(key)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Key (e.g., Material)"
-                    value={newSpecKey}
-                    onChange={(e) => setNewSpecKey(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSpecification())}
-                  />
-                  <Input
-                    placeholder="Value (e.g., PVC-Plane 750 N)"
-                    value={newSpecValue}
-                    onChange={(e) => setNewSpecValue(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSpecification())}
-                  />
-                  <Button type="button" variant="outline" onClick={addSpecification}>
-                    Add
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <Label>Features</Label>
-                <div className="space-y-2">
-                  {formData.features.map((feature, index) => (
-                    <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md">
-                      <span className="text-sm flex-1">{feature}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFeature(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Add a feature (e.g., UV-Schutz: 50 nach EN 13758-1)"
-                    value={newFeature}
-                    onChange={(e) => setNewFeature(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addFeature())}
-                  />
-                  <Button type="button" variant="outline" onClick={addFeature}>
-                    Add
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Saving..." : editingProduct ? "Update Product" : "Add Product"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {products.map((product) => (
-          <Card key={product.id} className="group hover:shadow-lg transition-all duration-200">
-            <CardHeader className="p-0">
-              <div className="relative aspect-[4/3] overflow-hidden rounded-t-lg">
-                <Image
-                  src={
-                    product.image || `/placeholder.svg?height=300&width=400&text=${encodeURIComponent(product.name)}`
-                  }
-                  alt={product.name}
-                  fill
-                  className="object-cover"
-                />
-                <div className="absolute top-3 right-3">
-                  <Badge variant={product.available ? "default" : "destructive"}>
-                    {product.available ? "Available" : "Unavailable"}
-                  </Badge>
-                </div>
-              </div>
-            </CardHeader>
-
-            <CardContent className="p-4">
-              <div className="space-y-3">
+              <CardContent className="p-6 space-y-4">
                 <div>
-                  <h3 className="font-semibold text-lg line-clamp-1">{product.name}</h3>
+                  <h3 className="font-bold text-xl mb-2 line-clamp-1 group-hover:text-[rgb(var(--mavi-blue))] transition-colors">
+                    {product.name}
+                  </h3>
                   <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
                 </div>
 
                 {(product.dimensions || product.capacity) && (
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    {product.dimensions && <div>Dimensions: {product.dimensions}</div>}
-                    {product.capacity && <div>Capacity: {product.capacity}</div>}
+                  <div className="flex gap-2 flex-wrap">
+                    {product.dimensions && (
+                      <Badge variant="outline" className="text-xs">
+                        {product.dimensions}
+                      </Badge>
+                    )}
+                    {product.capacity && (
+                      <Badge variant="outline" className="text-xs">
+                        {product.capacity}
+                      </Badge>
+                    )}
                   </div>
                 )}
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <Euro className="h-4 w-4" />
-                    <span className="font-bold text-lg">{product.price.toFixed(2)}/day</span>
+                <div className="flex items-center justify-between pt-2">
+                  <div className="flex items-center gap-2">
+                    <Euro className="h-5 w-5 text-[rgb(var(--mavi-blue))]" />
+                    <span className="font-bold text-2xl bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
+                      {product.price.toFixed(2)}
+                    </span>
+                    <span className="text-sm text-muted-foreground">/day</span>
                   </div>
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge
+                    variant="secondary"
+                    className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 border-[rgb(var(--mavi-blue))]/20"
+                  >
                     {product.type}
                   </Badge>
                 </div>
 
-                <div className="flex gap-2 pt-2">
+                <div className="flex gap-3 pt-4">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 bg-transparent"
+                    className="flex-1 hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] hover:border-[rgb(var(--mavi-blue))] transition-all"
                     onClick={() => handleEdit(product)}
                   >
-                    <Edit className="h-4 w-4 mr-1" />
+                    <Edit className="h-4 w-4 mr-2" />
                     Edit
                   </Button>
 
@@ -481,12 +604,12 @@ export default function AdminProductsPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-destructive hover:text-destructive bg-transparent"
+                        className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive transition-all"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent>
+                    <AlertDialogContent className="animate-scale-in">
                       <AlertDialogHeader>
                         <AlertDialogTitle>Delete Product</AlertDialogTitle>
                         <AlertDialogDescription>
@@ -505,25 +628,39 @@ export default function AdminProductsPage() {
                     </AlertDialogContent>
                   </AlertDialog>
                 </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {filteredProducts.length === 0 && (
+          <Card className="border-2 border-dashed border-border animate-fade-in">
+            <CardContent className="text-center py-20">
+              <div className="mx-auto mb-6 p-6 rounded-3xl bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 w-fit">
+                <Package className="h-20 w-20 text-[rgb(var(--mavi-blue))]" />
               </div>
+              <h3 className="text-2xl font-bold mb-3">
+                {searchQuery ? "No products found" : "No products yet"}
+              </h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                {searchQuery
+                  ? "Try adjusting your search terms"
+                  : "Start by adding your first rental product to your inventory."}
+              </p>
+              {!searchQuery && (
+                <Button
+                  onClick={() => setIsDialogOpen(true)}
+                  size="lg"
+                  className="bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all hover:scale-105 shadow-lg"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Add Your First Product
+                </Button>
+              )}
             </CardContent>
           </Card>
-        ))}
+        )}
       </div>
-
-      {products.length === 0 && (
-        <Card>
-          <CardContent className="text-center py-12">
-            <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold mb-2">No products found</h3>
-            <p className="text-muted-foreground mb-4">Start by adding your first rental product.</p>
-            <Button onClick={() => setIsDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }

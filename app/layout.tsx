@@ -17,7 +17,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
+      <head>
+        <title>MaVi Rent - Premium Event Equipment Rental</title>
+        <meta name="description" content="Professional event equipment rental services" />
+      </head>
       <body className={`font-sans ${inter.variable}`}>
         <AuthProvider>
           <Header />
