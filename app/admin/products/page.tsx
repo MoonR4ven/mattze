@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Plus, Edit, Trash2, Package, Euro } from "lucide-react"
+import { Plus, Edit, Trash2, Package, Euro, X } from "lucide-react"
 import { toast } from "sonner"
 import Image from "next/image"
 
@@ -37,6 +37,14 @@ interface ProductFormData {
   price: number
   image: string
   available: boolean
+  dimensions: string
+  capacity: string
+  specifications: {
+    material?: string
+    uvProtection?: string
+    [key: string]: string | undefined
+  }
+  features: string[]
 }
 
 const initialFormData: ProductFormData = {
@@ -46,6 +54,10 @@ const initialFormData: ProductFormData = {
   price: 0,
   image: "",
   available: true,
+  dimensions: "",
+  capacity: "",
+  specifications: {},
+  features: [],
 }
 
 export default function AdminProductsPage() {
@@ -55,6 +67,9 @@ export default function AdminProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [newFeature, setNewFeature] = useState("")
+  const [newSpecKey, setNewSpecKey] = useState("")
+  const [newSpecValue, setNewSpecValue] = useState("")
 
   useEffect(() => {
     fetchProducts()
@@ -78,21 +93,18 @@ export default function AdminProductsPage() {
 
     try {
       if (editingProduct) {
-        // Update existing product
         const success = await updateProduct(editingProduct.id, formData)
         if (success) {
           toast.success("Product updated successfully")
-          setProducts(products.map((p) => (p.id === editingProduct.id ? { ...p, ...formData } : p)))
+          await fetchProducts()
         } else {
           toast.error("Failed to update product")
         }
       } else {
-        // Add new product
         const productId = await addProduct(formData)
         if (productId) {
           toast.success("Product added successfully")
-          const newProduct: Product = { id: productId, ...formData }
-          setProducts([...products, newProduct])
+          await fetchProducts()
         } else {
           toast.error("Failed to add product")
         }
@@ -116,6 +128,10 @@ export default function AdminProductsPage() {
       price: product.price,
       image: product.image || "",
       available: product.available ?? true,
+      dimensions: product.dimensions || "",
+      capacity: product.capacity || "",
+      specifications: product.specifications || {},
+      features: product.features || [],
     })
     setIsDialogOpen(true)
   }
@@ -139,10 +155,55 @@ export default function AdminProductsPage() {
     setIsDialogOpen(false)
     setEditingProduct(null)
     setFormData(initialFormData)
+    setNewFeature("")
+    setNewSpecKey("")
+    setNewSpecValue("")
   }
 
-  const handleInputChange = (field: keyof ProductFormData, value: string | number | boolean) => {
+  const handleInputChange = (field: keyof ProductFormData, value: string | number | boolean | any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const addFeature = () => {
+    if (newFeature.trim()) {
+      setFormData((prev) => ({
+        ...prev,
+        features: [...prev.features, newFeature.trim()],
+      }))
+      setNewFeature("")
+    }
+  }
+
+  const removeFeature = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      features: prev.features.filter((_, i) => i !== index),
+    }))
+  }
+
+  const addSpecification = () => {
+    if (newSpecKey.trim() && newSpecValue.trim()) {
+      setFormData((prev) => ({
+        ...prev,
+        specifications: {
+          ...prev.specifications,
+          [newSpecKey.trim()]: newSpecValue.trim(),
+        },
+      }))
+      setNewSpecKey("")
+      setNewSpecValue("")
+    }
+  }
+
+  const removeSpecification = (key: string) => {
+    setFormData((prev) => {
+      const newSpecs = { ...prev.specifications }
+      delete newSpecs[key]
+      return {
+        ...prev,
+        specifications: newSpecs,
+      }
+    })
   }
 
   if (loading) {
@@ -168,7 +229,7 @@ export default function AdminProductsPage() {
               Add Product
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingProduct ? "Edit Product" : "Add New Product"}</DialogTitle>
             </DialogHeader>
@@ -181,7 +242,7 @@ export default function AdminProductsPage() {
                     id="name"
                     value={formData.name}
                     onChange={(e) => handleInputChange("name", e.target.value)}
-                    placeholder="Enter product name"
+                    placeholder="e.g., Partyzelt 5x5m"
                     required
                   />
                 </div>
@@ -209,13 +270,13 @@ export default function AdminProductsPage() {
                   id="description"
                   value={formData.description}
                   onChange={(e) => handleInputChange("description", e.target.value)}
-                  placeholder="Enter product description"
-                  rows={3}
+                  placeholder="Enter detailed product description"
+                  rows={4}
                   required
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="price">Daily Price (€)</Label>
                   <Input
@@ -227,6 +288,38 @@ export default function AdminProductsPage() {
                     onChange={(e) => handleInputChange("price", Number.parseFloat(e.target.value) || 0)}
                     placeholder="0.00"
                     required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="dimensions">Dimensions</Label>
+                  <Input
+                    id="dimensions"
+                    value={formData.dimensions}
+                    onChange={(e) => handleInputChange("dimensions", e.target.value)}
+                    placeholder="e.g., 5x5m"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="capacity">Capacity</Label>
+                  <Input
+                    id="capacity"
+                    value={formData.capacity}
+                    onChange={(e) => handleInputChange("capacity", e.target.value)}
+                    placeholder="e.g., 50 persons standing"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="image">Image URL</Label>
+                  <Input
+                    id="image"
+                    value={formData.image}
+                    onChange={(e) => handleInputChange("image", e.target.value)}
+                    placeholder="Enter image URL"
                   />
                 </div>
 
@@ -247,17 +340,74 @@ export default function AdminProductsPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="image">Image URL</Label>
-                <Input
-                  id="image"
-                  value={formData.image}
-                  onChange={(e) => handleInputChange("image", e.target.value)}
-                  placeholder="Enter image URL or leave empty for placeholder"
-                />
+              <div className="space-y-3">
+                <Label>Specifications</Label>
+                <div className="space-y-2">
+                  {Object.entries(formData.specifications).map(([key, value]) => (
+                    <div key={key} className="flex items-center gap-2 p-2 bg-muted rounded-md">
+                      <span className="font-medium text-sm flex-1">{key}:</span>
+                      <span className="text-sm flex-1">{value}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeSpecification(key)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Key (e.g., Material)"
+                    value={newSpecKey}
+                    onChange={(e) => setNewSpecKey(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSpecification())}
+                  />
+                  <Input
+                    placeholder="Value (e.g., PVC-Plane 750 N)"
+                    value={newSpecValue}
+                    onChange={(e) => setNewSpecValue(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSpecification())}
+                  />
+                  <Button type="button" variant="outline" onClick={addSpecification}>
+                    Add
+                  </Button>
+                </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4">
+              <div className="space-y-3">
+                <Label>Features</Label>
+                <div className="space-y-2">
+                  {formData.features.map((feature, index) => (
+                    <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md">
+                      <span className="text-sm flex-1">{feature}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFeature(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add a feature (e.g., UV-Schutz: 50 nach EN 13758-1)"
+                    value={newFeature}
+                    onChange={(e) => setNewFeature(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addFeature())}
+                  />
+                  <Button type="button" variant="outline" onClick={addFeature}>
+                    Add
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
                 <Button type="button" variant="outline" onClick={handleCloseDialog}>
                   Cancel
                 </Button>
@@ -297,6 +447,13 @@ export default function AdminProductsPage() {
                   <h3 className="font-semibold text-lg line-clamp-1">{product.name}</h3>
                   <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
                 </div>
+
+                {(product.dimensions || product.capacity) && (
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    {product.dimensions && <div>Dimensions: {product.dimensions}</div>}
+                    {product.capacity && <div>Capacity: {product.capacity}</div>}
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1">

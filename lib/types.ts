@@ -6,6 +6,15 @@ export interface Product {
   price: number
   image?: string
   available?: boolean
+  specifications?: {
+    material?: string
+    uvProtection?: string
+    dimensions?: string
+    [key: string]: string | undefined
+  }
+  features?: string[]
+  dimensions?: string
+  capacity?: string
 }
 
 export interface BookingSlot {
