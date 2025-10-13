@@ -212,12 +212,12 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[1200px] max-h-[90vh] overflow-y-auto p-0">
-        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 border-b">
+      <DialogContent className="sm:max-w-[1200px] max-h-[90vh] overflow-y-auto p-0 bg-background">
+        <div className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/10 via-[rgb(var(--mavi-turquoise))]/5 to-transparent p-6 border-b">
           <DialogHeader className="space-y-3">
             <DialogTitle className="flex items-center gap-3 text-xl">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <CalendarIcon className="h-5 w-5 text-primary" />
+              <div className="p-2 bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 rounded-lg">
+                <CalendarIcon className="h-5 w-5 text-[rgb(var(--mavi-blue))]" />
               </div>
               Book {product.name}
             </DialogTitle>
@@ -381,7 +381,7 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
               {startDate && endDate && (
                 <div className="space-y-4">
                   <Label className="text-base font-medium">Booking Summary</Label>
-                  <div className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border border-primary/20">
+                  <div className="p-6 bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 rounded-xl border border-[rgb(var(--mavi-blue))]/20">
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Quantity</span>
@@ -406,7 +406,9 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
                       <div className="h-px bg-border"></div>
                       <div className="flex justify-between items-center">
                         <span className="font-medium">Total Price</span>
-                        <span className="text-2xl font-bold text-primary">€{totalPrice.toFixed(2)}</span>
+                        <span className="text-2xl font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
+                          €{totalPrice.toFixed(2)}
+                        </span>
                       </div>
                       <div className="text-xs text-muted-foreground">
                         €{product.price.toFixed(2)} × {quantity} item{quantity > 1 ? "s" : ""} × {numberOfDays} day
@@ -435,7 +437,7 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
             <Button
               onClick={handleConfirm}
               disabled={!startDate || !endDate}
-              className="px-6 bg-primary hover:bg-primary/90"
+              className="px-6 bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all"
             >
               Confirm Booking • €{totalPrice.toFixed(2)}
             </Button>

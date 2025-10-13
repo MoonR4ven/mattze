@@ -5,8 +5,10 @@ import type { Product } from "@/lib/types"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Euro } from "lucide-react"
+import { Calendar, Euro, Eye } from "lucide-react"
 import Image from "next/image"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useCart } from "@/hooks/use-cart"
 import { TimeBookingDialog } from "./time-booking-dialog"
 
@@ -15,28 +17,11 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const [showBookingDialog, setShowBookingDialog] = useState(false)
-  const { addToCart } = useCart()
-
-  const handleAddToCart = (startDate?: string, endDate?: string, days?: number) => {
-    const totalPrice = days ? product.price * days : product.price
-
-    addToCart({
-      ...product,
-      quantity: 1,
-      startDate,
-      endDate,
-      numberOfDays: days,
-      totalPrice,
-      selectedDate: startDate,
-      selectedTime: undefined,
-    })
-    setShowBookingDialog(false)
-  }
+  const router = useRouter()
 
   return (
-    <>
-      <Card className="group hover-lift overflow-hidden border-2 border-transparent hover:border-[rgb(var(--mavi-blue))]/20 transition-all h-full flex flex-col">
+    <Card className="group hover-lift overflow-hidden border-2 border-transparent hover:border-[rgb(var(--mavi-blue))]/20 transition-all h-full flex flex-col">
+      <Link href={`/products/${product.id}`}>
         <CardHeader className="p-0">
           <div className="relative aspect-[4/3] overflow-hidden">
             <Image
@@ -97,25 +82,18 @@ export function ProductCard({ product }: ProductCardProps) {
             </div>
           </div>
         </CardContent>
+      </Link>
 
-        <CardFooter className="p-6 pt-0">
-          <Button
-            className="w-full bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all hover:scale-105 shadow-lg"
-            onClick={() => setShowBookingDialog(true)}
-            disabled={!product.available}
-          >
-            <Calendar className="h-4 w-4 mr-2" />
-            Book Now
-          </Button>
-        </CardFooter>
-      </Card>
-
-      <TimeBookingDialog
-        product={product}
-        open={showBookingDialog}
-        onOpenChange={setShowBookingDialog}
-        onConfirm={handleAddToCart}
-      />
-    </>
+      <CardFooter className="p-6 pt-0">
+        <Button
+          className="w-full bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all hover:scale-105 shadow-lg"
+          onClick={() => router.push(`/products/${product.id}`)}
+          disabled={!product.available}
+        >
+          <Eye className="h-4 w-4 mr-2" />
+          View Details
+        </Button>
+      </CardFooter>
+    </Card>
   )
 }
