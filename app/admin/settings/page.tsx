@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,10 +10,12 @@ import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { Settings, Store, Bell, CreditCard, Mail, Save } from "lucide-react"
 import { toast } from "sonner"
+import { getSettings, updateSettings, type StoreSettings } from "@/lib/settings"
 
 export default function AdminSettingsPage() {
   const [isSaving, setIsSaving] = useState(false)
-  const [settings, setSettings] = useState({
+  const [loading, setLoading] = useState(true)
+  const [settings, setSettings] = useState<StoreSettings>({
     storeName: "Party Rental",
     storeEmail: "info@partyrental.com",
     storePhone: "+43 123 456 789",
@@ -27,16 +29,56 @@ export default function AdminSettingsPage() {
     autoConfirmBookings: false,
   })
 
-  const handleSave = async () => {
-    setIsSaving(true)
-    setTimeout(() => {
-      toast.success("Settings saved successfully")
-      setIsSaving(false)
-    }, 1000)
+  useEffect(() => {
+    fetchSettings()
+  }, [])
+
+  const fetchSettings = async () => {
+    try {
+      const data = await getSettings()
+      setSettings(data)
+    } catch (error) {
+      console.error("Error loading settings:", error)
+      toast.error("Failed to load settings")
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleInputChange = (field: string, value: string | boolean) => {
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      const success = await updateSettings(settings)
+      if (success) {
+        toast.success("Settings saved successfully")
+      } else {
+        toast.error("Failed to save settings")
+      }
+    } catch (error) {
+      console.error("Error saving settings:", error)
+      toast.error("An error occurred while saving settings")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleInputChange = (field: keyof StoreSettings, value: string | boolean) => {
     setSettings(prev => ({ ...prev, [field]: value }))
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white">
+        <div className="container mx-auto px-4 py-12">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 mx-auto border-4 border-[rgb(var(--mavi-blue))] border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-muted-foreground">Loading settings...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

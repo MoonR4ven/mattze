@@ -24,9 +24,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Plus, Edit, Trash2, Package, Euro, X, Sparkles, TrendingUp } from "lucide-react"
+import { Plus, Edit, Trash2, Package, Euro, X, Sparkles, TrendingUp, Upload } from "lucide-react"
 import { toast } from "sonner"
 import Image from "next/image"
+import { uploadImageToImgBB } from "@/lib/imgbb"
 
 const productTypes = ["Audio Equipment", "Decoration", "Furniture", "Entertainment", "Shelter", "Article"]
 
@@ -71,6 +72,7 @@ export default function AdminProductsPage() {
   const [newSpecKey, setNewSpecKey] = useState("")
   const [newSpecValue, setNewSpecValue] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   useEffect(() => {
     fetchProducts()
@@ -163,6 +165,33 @@ export default function AdminProductsPage() {
 
   const handleInputChange = (field: keyof ProductFormData, value: string | number | boolean | any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file")
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size should be less than 5MB")
+      return
+    }
+
+    setUploadingImage(true)
+    try {
+      const imageUrl = await uploadImageToImgBB(file)
+      setFormData((prev) => ({ ...prev, image: imageUrl }))
+      toast.success("Image uploaded successfully")
+    } catch (error) {
+      console.error("Error uploading image:", error)
+      toast.error("Failed to upload image")
+    } finally {
+      setUploadingImage(false)
+    }
   }
 
   const addFeature = () => {
@@ -368,15 +397,48 @@ export default function AdminProductsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="image" className="text-sm font-semibold">
-                        Image URL
+                        Product Image
                       </Label>
-                      <Input
-                        id="image"
-                        value={formData.image}
-                        onChange={(e) => handleInputChange("image", e.target.value)}
-                        placeholder="Enter image URL"
-                        className="h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
-                      />
+                      <div className="space-y-3">
+                        <div className="flex gap-2">
+                          <Input
+                            id="image"
+                            value={formData.image}
+                            onChange={(e) => handleInputChange("image", e.target.value)}
+                            placeholder="Image URL"
+                            className="h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => document.getElementById("image-upload")?.click()}
+                            disabled={uploadingImage}
+                            className="h-12 px-4 hover:bg-[rgb(var(--mavi-blue))]/10"
+                          >
+                            <Upload className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <input
+                          id="image-upload"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                        {uploadingImage && (
+                          <p className="text-sm text-muted-foreground">Uploading image...</p>
+                        )}
+                        {formData.image && (
+                          <div className="relative w-full h-32 rounded-lg overflow-hidden border">
+                            <Image
+                              src={formData.image}
+                              alt="Preview"
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div className="space-y-2">

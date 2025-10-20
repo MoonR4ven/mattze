@@ -98,7 +98,7 @@ export function Header() {
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] bg-background">
+              <SheetContent side="right" className="w-[300px] bg-white">
                 <div className="flex flex-col gap-6 mt-8">
                   <Link
                     href="/"

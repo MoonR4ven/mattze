@@ -73,14 +73,22 @@ export default function AdminBookingsPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Loading bookings...</div>
+      <div className="min-h-screen bg-white">
+        <div className="container mx-auto px-4 py-12">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 mx-auto border-4 border-[rgb(var(--mavi-blue))] border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-muted-foreground">Loading bookings...</p>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-white">
+      <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Booking Management</h1>
         <p className="text-muted-foreground">Manage rental bookings and calendar integration</p>
@@ -156,6 +164,7 @@ export default function AdminBookingsPage() {
             </CardContent>
           </Card>
         )}
+      </div>
       </div>
     </div>
   )
