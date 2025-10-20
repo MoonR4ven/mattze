@@ -216,7 +216,7 @@ export default function AdminProductsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="min-h-screen bg-white">
         <div className="container mx-auto px-4 py-12">
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="text-center space-y-4 animate-fade-in">
@@ -230,7 +230,7 @@ export default function AdminProductsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+    <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-12">
         <div className="mb-12 space-y-8 animate-slide-up">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
@@ -262,7 +262,7 @@ export default function AdminProductsPage() {
                   Add Product
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto animate-scale-in">
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto animate-scale-in bg-white">
                 <DialogHeader>
                   <DialogTitle className="text-2xl flex items-center gap-2">
                     <Sparkles className="h-6 w-6 text-[rgb(var(--mavi-blue))]" />
@@ -398,7 +398,7 @@ export default function AdminProductsPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-4 p-6 rounded-2xl bg-gradient-to-br from-muted/50 to-muted/20 border border-border">
+                  <div className="space-y-4 p-6 rounded-2xl bg-gray-50 border border-gray-200">
                     <Label className="text-sm font-semibold flex items-center gap-2">
                       <Sparkles className="h-4 w-4 text-[rgb(var(--mavi-turquoise))]" />
                       Specifications
@@ -407,7 +407,7 @@ export default function AdminProductsPage() {
                       {Object.entries(formData.specifications).map(([key, value]) => (
                         <div
                           key={key}
-                          className="flex items-center gap-3 p-3 bg-card rounded-xl border border-border hover:border-[rgb(var(--mavi-blue))]/30 transition-all"
+                          className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 hover:border-[rgb(var(--mavi-blue))]/30 transition-all"
                         >
                           <span className="font-medium text-sm flex-1">{key}:</span>
                           <span className="text-sm flex-1 text-muted-foreground">{value}</span>
@@ -449,7 +449,7 @@ export default function AdminProductsPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-4 p-6 rounded-2xl bg-gradient-to-br from-muted/50 to-muted/20 border border-border">
+                  <div className="space-y-4 p-6 rounded-2xl bg-gray-50 border border-gray-200">
                     <Label className="text-sm font-semibold flex items-center gap-2">
                       <Sparkles className="h-4 w-4 text-[rgb(var(--mavi-turquoise))]" />
                       Features
@@ -458,7 +458,7 @@ export default function AdminProductsPage() {
                       {formData.features.map((feature, index) => (
                         <div
                           key={index}
-                          className="flex items-center gap-3 p-3 bg-card rounded-xl border border-border hover:border-[rgb(var(--mavi-blue))]/30 transition-all"
+                          className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 hover:border-[rgb(var(--mavi-blue))]/30 transition-all"
                         >
                           <span className="text-sm flex-1">{feature}</span>
                           <Button
@@ -609,7 +609,7 @@ export default function AdminProductsPage() {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="animate-scale-in">
+                    <AlertDialogContent className="animate-scale-in bg-white">
                       <AlertDialogHeader>
                         <AlertDialogTitle>Delete Product</AlertDialogTitle>
                         <AlertDialogDescription>
