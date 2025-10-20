@@ -167,8 +167,8 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[900px] max-h-[95vh] overflow-hidden p-0 gap-0 bg-background border-2">
-        <div className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/5 via-transparent to-[rgb(var(--mavi-turquoise))]/5 px-4 sm:px-6 py-4 border-b bg-background">
+      <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[900px] max-h-[95vh] overflow-hidden p-0 gap-0 bg-white border-2">
+        <div className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/5 via-transparent to-[rgb(var(--mavi-turquoise))]/5 px-4 sm:px-6 py-4 border-b bg-white">
           <DialogHeader>
             <DialogTitle className="text-xl sm:text-2xl font-bold flex items-center gap-2">
               <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6 text-[rgb(var(--mavi-blue))] flex-shrink-0" />
@@ -180,8 +180,8 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
           </DialogHeader>
         </div>
 
-        <div className="flex flex-col md:grid md:grid-cols-[1fr_320px] h-full overflow-hidden bg-background">
-          <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto max-h-[calc(95vh-240px)] md:max-h-[calc(95vh-180px)] bg-background">
+        <div className="flex flex-col md:grid md:grid-cols-[1fr_320px] h-full overflow-hidden bg-white">
+          <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto max-h-[calc(95vh-240px)] md:max-h-[calc(95vh-180px)] bg-white">
             <div className="space-y-4">
               <div>
                 <Label className="text-base font-semibold mb-3 flex items-center gap-2">
@@ -217,7 +217,7 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 sm:gap-4 p-3 sm:p-4 bg-muted/50 rounded-xl">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-xl border border-gray-200">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-[rgb(var(--mavi-blue))] flex-shrink-0"></div>
                   <span className="text-xs sm:text-sm font-medium">Selected</span>
@@ -246,7 +246,7 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
                 {Array.from({ length: 2 }, (_, i) => {
                   const monthDate = addMonths(new Date(), i)
                   return (
-                    <div key={i} className="border-2 border-border rounded-2xl p-3 sm:p-4 bg-card/50 hover:border-[rgb(var(--mavi-blue))]/30 transition-colors">
+                    <div key={i} className="border-2 border-gray-200 rounded-2xl p-3 sm:p-4 bg-white hover:border-[rgb(var(--mavi-blue))]/30 transition-colors">
                       <Calendar
                         mode="single"
                         selected={startDate}
@@ -307,7 +307,7 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
             </div>
           </div>
 
-          <div className="bg-gradient-to-b from-muted/30 to-muted/50 border-t md:border-t-0 md:border-l p-4 sm:p-6 flex flex-col bg-background">
+          <div className="bg-gray-50 border-t md:border-t-0 md:border-l p-4 sm:p-6 flex flex-col">
             <div className="flex-1 space-y-4 sm:space-y-6">
               <div>
                 <h3 className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
