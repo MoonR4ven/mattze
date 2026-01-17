@@ -19,7 +19,7 @@ export function CartSidebar() {
 
       <div
         className={cn(
-          "fixed right-0 top-0 h-full w-full md:w-[400px] bg-card border-l shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col",
+          "fixed right-0 top-0 h-full w-full md:w-[400px] bg-white border-l shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col",
           isOpen ? "translate-x-0" : "translate-x-full",
         )}
       >
@@ -53,7 +53,7 @@ export function CartSidebar() {
               {items.map((item, index) => (
                 <div
                   key={`${item.id}-${item.selectedDate}-${item.selectedTime}-${index}`}
-                  className="bg-muted/50 rounded-lg p-3 space-y-3"
+                  className="bg-gray-50 rounded-lg p-3 space-y-3 border border-gray-200"
                 >
                   <div className="flex gap-3">
                     <div className="relative w-20 h-20 rounded-md overflow-hidden bg-muted flex-shrink-0">
@@ -128,7 +128,7 @@ export function CartSidebar() {
               ))}
             </div>
 
-            <div className="border-t p-4 space-y-4 bg-card">
+            <div className="border-t p-4 space-y-4 bg-white">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>

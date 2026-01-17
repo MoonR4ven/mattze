@@ -24,9 +24,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Plus, Edit, Trash2, Package, Euro, X, Sparkles, TrendingUp } from "lucide-react"
+import { Plus, Edit, Trash2, Package, Euro, X, Sparkles, TrendingUp, Upload } from "lucide-react"
 import { toast } from "sonner"
 import Image from "next/image"
+import { uploadImageToImgBB } from "@/lib/imgbb"
 
 const productTypes = ["Audio Equipment", "Decoration", "Furniture", "Entertainment", "Shelter", "Article"]
 
@@ -71,6 +72,7 @@ export default function AdminProductsPage() {
   const [newSpecKey, setNewSpecKey] = useState("")
   const [newSpecValue, setNewSpecValue] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   useEffect(() => {
     fetchProducts()
@@ -165,6 +167,33 @@ export default function AdminProductsPage() {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file")
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size should be less than 5MB")
+      return
+    }
+
+    setUploadingImage(true)
+    try {
+      const imageUrl = await uploadImageToImgBB(file)
+      setFormData((prev) => ({ ...prev, image: imageUrl }))
+      toast.success("Image uploaded successfully")
+    } catch (error) {
+      console.error("Error uploading image:", error)
+      toast.error("Failed to upload image")
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
   const addFeature = () => {
     if (newFeature.trim()) {
       setFormData((prev) => ({
@@ -216,7 +245,7 @@ export default function AdminProductsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="min-h-screen bg-white">
         <div className="container mx-auto px-4 py-12">
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="text-center space-y-4 animate-fade-in">
@@ -230,7 +259,7 @@ export default function AdminProductsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+    <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-12">
         <div className="mb-12 space-y-8 animate-slide-up">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
@@ -262,7 +291,7 @@ export default function AdminProductsPage() {
                   Add Product
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto animate-scale-in">
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto animate-scale-in bg-white">
                 <DialogHeader>
                   <DialogTitle className="text-2xl flex items-center gap-2">
                     <Sparkles className="h-6 w-6 text-[rgb(var(--mavi-blue))]" />
@@ -368,15 +397,48 @@ export default function AdminProductsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="image" className="text-sm font-semibold">
-                        Image URL
+                        Product Image
                       </Label>
-                      <Input
-                        id="image"
-                        value={formData.image}
-                        onChange={(e) => handleInputChange("image", e.target.value)}
-                        placeholder="Enter image URL"
-                        className="h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
-                      />
+                      <div className="space-y-3">
+                        <div className="flex gap-2">
+                          <Input
+                            id="image"
+                            value={formData.image}
+                            onChange={(e) => handleInputChange("image", e.target.value)}
+                            placeholder="Image URL"
+                            className="h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => document.getElementById("image-upload")?.click()}
+                            disabled={uploadingImage}
+                            className="h-12 px-4 hover:bg-[rgb(var(--mavi-blue))]/10"
+                          >
+                            <Upload className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <input
+                          id="image-upload"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                        {uploadingImage && (
+                          <p className="text-sm text-muted-foreground">Uploading image...</p>
+                        )}
+                        {formData.image && (
+                          <div className="relative w-full h-32 rounded-lg overflow-hidden border">
+                            <Image
+                              src={formData.image}
+                              alt="Preview"
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -398,7 +460,7 @@ export default function AdminProductsPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-4 p-6 rounded-2xl bg-gradient-to-br from-muted/50 to-muted/20 border border-border">
+                  <div className="space-y-4 p-6 rounded-2xl bg-gray-50 border border-gray-200">
                     <Label className="text-sm font-semibold flex items-center gap-2">
                       <Sparkles className="h-4 w-4 text-[rgb(var(--mavi-turquoise))]" />
                       Specifications
@@ -407,7 +469,7 @@ export default function AdminProductsPage() {
                       {Object.entries(formData.specifications).map(([key, value]) => (
                         <div
                           key={key}
-                          className="flex items-center gap-3 p-3 bg-card rounded-xl border border-border hover:border-[rgb(var(--mavi-blue))]/30 transition-all"
+                          className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 hover:border-[rgb(var(--mavi-blue))]/30 transition-all"
                         >
                           <span className="font-medium text-sm flex-1">{key}:</span>
                           <span className="text-sm flex-1 text-muted-foreground">{value}</span>
@@ -449,7 +511,7 @@ export default function AdminProductsPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-4 p-6 rounded-2xl bg-gradient-to-br from-muted/50 to-muted/20 border border-border">
+                  <div className="space-y-4 p-6 rounded-2xl bg-gray-50 border border-gray-200">
                     <Label className="text-sm font-semibold flex items-center gap-2">
                       <Sparkles className="h-4 w-4 text-[rgb(var(--mavi-turquoise))]" />
                       Features
@@ -458,7 +520,7 @@ export default function AdminProductsPage() {
                       {formData.features.map((feature, index) => (
                         <div
                           key={index}
-                          className="flex items-center gap-3 p-3 bg-card rounded-xl border border-border hover:border-[rgb(var(--mavi-blue))]/30 transition-all"
+                          className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 hover:border-[rgb(var(--mavi-blue))]/30 transition-all"
                         >
                           <span className="text-sm flex-1">{feature}</span>
                           <Button
@@ -609,7 +671,7 @@ export default function AdminProductsPage() {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="animate-scale-in">
+                    <AlertDialogContent className="animate-scale-in bg-white">
                       <AlertDialogHeader>
                         <AlertDialogTitle>Delete Product</AlertDialogTitle>
                         <AlertDialogDescription>
