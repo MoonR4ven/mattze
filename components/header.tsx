@@ -63,6 +63,7 @@ export function Header() {
               size="sm"
               onClick={handleAuthAction}
               className="hidden sm:flex hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] transition-all"
+              suppressHydrationWarning
             >
               {user ? (
                 <>
@@ -82,6 +83,7 @@ export function Header() {
                 variant="ghost"
                 size="sm"
                 className="relative hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] transition-all"
+                suppressHydrationWarning
               >
                 <ShoppingCart className="h-5 w-5" />
                 {totalItems > 0 && (
@@ -128,6 +130,7 @@ export function Header() {
                       variant="outline"
                       onClick={handleAuthAction}
                       className="w-full justify-start hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] transition-all"
+                      suppressHydrationWarning
                     >
                       {user ? (
                         <>

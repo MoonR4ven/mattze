@@ -41,10 +41,14 @@ export class GoogleCalendarAPI {
     event: CalendarEvent,
   ): Promise<{ success: boolean; eventId?: string; error?: string }> {
     try {
+      // Remove attendees - service account cannot invite external attendees without Domain-Wide Delegation
+      const eventData = { ...event }
+      delete eventData.attendees
+
       const response = await this.calendar.events.insert({
         calendarId,
-        requestBody: event,
-        sendUpdates: "all", // Send email notifications to attendees
+        requestBody: eventData,
+        // Don't send updates since we're not inviting external attendees
       })
 
       return {
@@ -185,5 +189,25 @@ This is an automated booking from the rental system.
       ],
       location: "Delivery/Pickup Location (TBD)",
     }
+  }
+
+  generateGoogleCalendarLink(event: CalendarEvent): string {
+    const startTime = event.start.dateTime
+    const endTime = event.end.dateTime
+    
+    // Format: YYYYMMDDTHHMMSSZ
+    const startFormatted = startTime.replace(/[-:]/g, '').split('.')[0] + 'Z'
+    const endFormatted = endTime.replace(/[-:]/g, '').split('.')[0] + 'Z'
+    
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: event.summary,
+      details: event.description,
+      location: event.location || '',
+      starttime: startFormatted,
+      endtime: endFormatted,
+    })
+    
+    return `https://calendar.google.com/calendar/render?${params.toString()}`
   }
 }

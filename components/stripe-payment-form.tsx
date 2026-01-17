@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { loadStripe } from "@stripe/stripe-js"
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js"
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -38,129 +38,66 @@ function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
 
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [clientSecret, setClientSecret] = useState<string | null>(null)
 
   const totalAmount = getTotalPrice() * 1.21 // Including 21% VAT
-
-  useEffect(() => {
-    // Create payment intent when component mounts
-    createPaymentIntent()
-  }, [])
-
-  const createPaymentIntent = async () => {
-    try {
-      const response = await fetch("/api/create-payment-intent", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          amount: totalAmount,
-          currency: "eur",
-          customerInfo,
-          items: items.map((item) => ({
-            id: item.id,
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity,
-            selectedDate: item.selectedDate,
-            selectedTime: item.selectedTime,
-          })),
-        }),
-      })
-
-      const data = await response.json()
-
-      if (data.clientSecret) {
-        setClientSecret(data.clientSecret)
-      } else {
-        setError("Failed to initialize payment")
-      }
-    } catch (err) {
-      setError("Failed to initialize payment")
-      console.error("Payment intent creation failed:", err)
-    }
-  }
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
 
-    if (!stripe || !elements || !clientSecret) {
+    if (!stripe || !elements) {
       return
     }
 
     setProcessing(true)
     setError(null)
 
-    const cardElement = elements.getElement(CardElement)
-
-    if (!cardElement) {
-      setError("Card element not found")
-      setProcessing(false)
-      return
-    }
-
-    // Confirm payment
-    const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-      payment_method: {
-        card: cardElement,
-        billing_details: {
-          name: `${customerInfo.firstName} ${customerInfo.lastName}`,
-          email: customerInfo.email,
-          phone: customerInfo.phone,
-          address: {
-            line1: customerInfo.address,
-            city: customerInfo.city,
-            postal_code: customerInfo.postalCode,
-            country: customerInfo.country.toLowerCase(),
-          },
+    try {
+      // Confirm payment with Payment Element
+      const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        redirect: "if_required",
+        confirmParams: {
+          return_url: `${window.location.origin}/checkout/success`,
         },
-      },
-    })
+      })
 
-    if (stripeError) {
-      setError(stripeError.message || "Payment failed")
-      setProcessing(false)
-    } else if (paymentIntent && paymentIntent.status === "succeeded") {
-      // Confirm payment on server and create order
-      try {
-        const response = await fetch("/api/confirm-payment", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            paymentIntentId: paymentIntent.id,
-          }),
-        })
+      if (stripeError) {
+        setError(stripeError.message || "Payment failed")
+      } else if (paymentIntent && paymentIntent.status === "succeeded") {
+        // Payment succeeded - call confirm-payment to sync to Billbee/Calendar
+        try {
+          const confirmResponse = await fetch("/api/confirm-payment", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              paymentIntentId: paymentIntent.id,
+            }),
+          })
 
-        const result = await response.json()
+          const result = await confirmResponse.json()
 
-        if (result.success) {
-          clearCart()
-          router.push(`/checkout/success?orderId=${result.orderId}`)
-        } else {
-          setError("Failed to process order")
+          if (result.success) {
+            clearCart()
+            router.push("/checkout/success")
+          } else {
+            setError("Payment processed but order confirmation failed")
+          }
+        } catch (err) {
+          setError("Payment processed but order confirmation failed")
+          console.error("Order confirmation failed:", err)
         }
-      } catch (err) {
-        setError("Failed to process order")
-        console.error("Order creation failed:", err)
       }
-
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Payment failed")
+    } finally {
       setProcessing(false)
     }
   }
 
   const cardElementOptions = {
-    style: {
-      base: {
-        fontSize: "16px",
-        color: "hsl(var(--foreground))",
-        "::placeholder": {
-          color: "hsl(var(--muted-foreground))",
-        },
-      },
-    },
+    layout: "tabs",
   }
 
   return (
@@ -182,9 +119,7 @@ function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Card Details</label>
-            <div className="p-3 border rounded-md bg-background">
-              <CardElement options={cardElementOptions} />
-            </div>
+            <PaymentElement />
           </div>
 
           <div className="text-xs text-muted-foreground">
@@ -205,7 +140,7 @@ function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
             >
               Back
             </Button>
-            <Button type="submit" className="flex-1" disabled={!stripe || processing || !clientSecret}>
+            <Button type="submit" className="flex-1" disabled={!stripe || processing}>
               {processing ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
@@ -226,8 +161,77 @@ function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
 }
 
 export function StripePaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
+  const { items, getTotalPrice } = useCart()
+  const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const totalAmount = getTotalPrice() * 1.21 // Including 21% VAT
+
+  useEffect(() => {
+    const createPaymentIntent = async () => {
+      try {
+        const response = await fetch("/api/create-payment-intent", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            amount: Math.round(totalAmount * 100),
+            currency: "eur",
+            customerInfo,
+            items: items,
+          }),
+        })
+
+        const { clientSecret: secret, error: err } = await response.json()
+
+        if (!response.ok || err) {
+          throw new Error(err || "Failed to create payment intent")
+        }
+
+        setClientSecret(secret)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to initialize payment")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    createPaymentIntent()
+  }, [items, customerInfo, totalAmount])
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!clientSecret) {
+    return null
+  }
+
   return (
-    <Elements stripe={stripePromise}>
+    <Elements stripe={stripePromise} key={clientSecret} options={{ clientSecret }}>
       <PaymentForm customerInfo={customerInfo} onBack={onBack} />
     </Elements>
   )

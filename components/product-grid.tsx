@@ -23,12 +23,14 @@ export function ProductGrid() {
   useEffect(() => {
     async function fetchProducts() {
       try {
+        console.log('🚀 ProductGrid: Starting to fetch products...')
         setLoading(true)
         const fetchedProducts = await getProducts()
+        console.log('📊 ProductGrid: Received', fetchedProducts.length, 'products')
         setProducts(fetchedProducts)
       } catch (err) {
         setError("Failed to load products")
-        console.error("Error fetching products:", err)
+        console.error("❌ ProductGrid: Error fetching products:", err)
       } finally {
         setLoading(false)
       }
@@ -111,15 +113,19 @@ export function ProductGrid() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {filteredProducts.map((product, index) => (
-            <div
-              key={product.id}
-              className="animate-fade-in"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <ProductCard product={product} />
-            </div>
-          ))}
+          {filteredProducts.map((product, index) => {
+            // Use a combination of id and index to ensure unique keys even with duplicate product IDs
+            const uniqueKey = `${product.id}-${index}`
+            return (
+              <div
+                key={uniqueKey}
+                className="animate-fade-in"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <ProductCard product={product} />
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

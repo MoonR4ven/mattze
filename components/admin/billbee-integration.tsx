@@ -98,7 +98,7 @@ export function BillbeeIntegration({ order, onOrderUpdate }: BillbeeIntegrationP
       case "failed":
         return <AlertCircle className="h-4 w-4 text-red-500" />
       case "pending":
-        return <Clock className="h-4 w-4 text-yellow-500" />
+        return <Clock className="h-4 w-4 text-[rgb(var(--mavi-bright-blue))]" />
       default:
         return <AlertCircle className="h-4 w-4 text-gray-500" />
     }

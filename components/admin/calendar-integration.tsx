@@ -7,6 +7,24 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Calendar, RefreshCw, ExternalLink, CheckCircle, AlertCircle, Clock, X } from "lucide-react"
 
+// Helper to safely convert Firestore timestamp to string
+const toTimeString = (value: any): string => {
+  if (!value) return "00:00"
+  try {
+    // If it's a Firestore Timestamp, convert to Date first
+    if (value.toDate && typeof value.toDate === 'function') {
+      return value.toDate().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    }
+    // If it's already a string, return it
+    if (typeof value === 'string') return value
+    // If it's a Date, format it
+    if (value instanceof Date) return value.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+  } catch (e) {
+    console.error('Error converting time:', e)
+  }
+  return "00:00"
+}
+
 interface Booking {
   id: string
   calendarEventId?: string
@@ -129,7 +147,7 @@ export function CalendarIntegration({ booking, onBookingUpdate }: CalendarIntegr
       case "sync_failed":
         return <AlertCircle className="h-4 w-4 text-red-500" />
       case "pending":
-        return <Clock className="h-4 w-4 text-yellow-500" />
+        return <Clock className="h-4 w-4 text-[rgb(var(--mavi-bright-blue))]" />
       default:
         return <AlertCircle className="h-4 w-4 text-gray-500" />
     }
@@ -201,7 +219,7 @@ export function CalendarIntegration({ booking, onBookingUpdate }: CalendarIntegr
               <strong>Email:</strong> {booking.customerEmail}
             </div>
             <div>
-              <strong>Time:</strong> {formatDateTime(booking.date, booking.startTime)} - {booking.endTime}
+              <strong>Time:</strong> {formatDateTime(booking.date, booking.startTime)} - {toTimeString(booking.endTime)}
             </div>
           </div>
         </div>

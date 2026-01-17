@@ -1,10 +1,23 @@
 import { type NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"
-import { collection, addDoc, updateDoc, doc } from "firebase/firestore"
-import { db } from "@/lib/firebase"
+import * as admin from "firebase-admin"
 import { BillbeeAPI } from "@/lib/billbee"
 import { GoogleCalendarAPI } from "@/lib/google-calendar"
 
+// Initialize Firebase Admin SDK
+if (!admin.apps.length) {
+  const serviceAccount = {
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+    privateKey: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+  }
+
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+  })
+}
+
+const db = admin.firestore()
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_dummy_key_for_build", {
   apiVersion: "2024-06-20",
 })
@@ -20,7 +33,7 @@ export async function POST(request: NextRequest) {
       // Parse order data from metadata
       const orderItems = JSON.parse(paymentIntent.metadata.orderItems || "[]")
 
-      // Create order in Firebase
+      // Create order in Firebase using Admin SDK
       const orderData = {
         paymentIntentId: paymentIntent.id,
         customerInfo: {
@@ -28,6 +41,10 @@ export async function POST(request: NextRequest) {
           lastName: paymentIntent.metadata.customerName?.split(" ").slice(1).join(" ") || "",
           email: paymentIntent.metadata.customerEmail || "",
           phone: paymentIntent.metadata.customerPhone || "",
+          address: paymentIntent.metadata.customerAddress || "",
+          city: paymentIntent.metadata.customerCity || "Amsterdam",
+          postalCode: paymentIntent.metadata.customerPostalCode || "",
+          country: paymentIntent.metadata.customerCountry || "NL",
         },
         items: orderItems,
         totalAmount: paymentIntent.amount / 100, // Convert from cents
@@ -40,7 +57,8 @@ export async function POST(request: NextRequest) {
         billbeeStatus: "pending",
       }
 
-      const docRef = await addDoc(collection(db, "orders"), orderData)
+      const orderRef = await db.collection("orders").add(orderData)
+      const orderId = orderRef.id
 
       const calendarAPI = new GoogleCalendarAPI()
       const calendarId = process.env.GOOGLE_CALENDAR_ID || "primary"
@@ -50,7 +68,7 @@ export async function POST(request: NextRequest) {
           const endTime = String(Number.parseInt(item.selectedTime.split(":")[0]) + 1).padStart(2, "0") + ":00"
 
           const bookingData = {
-            orderId: docRef.id,
+            orderId: orderId,
             productId: item.id,
             productName: item.name,
             date: item.selectedDate,
@@ -65,7 +83,7 @@ export async function POST(request: NextRequest) {
             calendarStatus: "pending",
           }
 
-          const bookingRef = await addDoc(collection(db, "bookings"), bookingData)
+          const bookingRef = await db.collection("bookings").add(bookingData)
 
           // Create Google Calendar event
           try {
@@ -77,14 +95,14 @@ export async function POST(request: NextRequest) {
               startTime: item.selectedTime,
               endTime: endTime,
               price: item.price * item.quantity,
-              orderId: docRef.id,
+              orderId: orderId,
             })
 
             const calendarResult = await calendarAPI.createEvent(calendarId, calendarEvent)
 
             if (calendarResult.success && calendarResult.eventId) {
               // Update booking with calendar event ID
-              await updateDoc(doc(db, "bookings", bookingRef.id), {
+              await db.collection("bookings").doc(bookingRef.id).update({
                 calendarEventId: calendarResult.eventId,
                 calendarStatus: "created",
               })
@@ -92,14 +110,14 @@ export async function POST(request: NextRequest) {
               console.log(`✅ Calendar event created: ${calendarResult.eventId}`)
             } else {
               console.error("❌ Failed to create calendar event:", calendarResult.error)
-              await updateDoc(doc(db, "bookings", bookingRef.id), {
+              await db.collection("bookings").doc(bookingRef.id).update({
                 calendarStatus: "failed",
                 calendarError: calendarResult.error,
               })
             }
           } catch (calendarError) {
             console.error("❌ Calendar integration error:", calendarError)
-            await updateDoc(doc(db, "bookings", bookingRef.id), {
+            await db.collection("bookings").doc(bookingRef.id).update({
               calendarStatus: "failed",
               calendarError: calendarError instanceof Error ? calendarError.message : "Unknown calendar error",
             })
@@ -109,8 +127,31 @@ export async function POST(request: NextRequest) {
 
       try {
         const billbeeAPI = new BillbeeAPI()
+        
+        // Update customer email/phone on their profile (like eBay does)
+        console.log("📋 Updating customer in Billbee...")
+        const customerResult = await billbeeAPI.updateCustomer({
+          firstName: orderData.customerInfo.firstName,
+          lastName: orderData.customerInfo.lastName,
+          email: orderData.customerInfo.email,
+          phone: orderData.customerInfo.phone,
+          address: orderData.customerInfo.address,
+          city: orderData.customerInfo.city,
+          postalCode: orderData.customerInfo.postalCode,
+          country: orderData.customerInfo.country,
+        })
+        
+        if (customerResult.success) {
+          if (customerResult.customerId) {
+            console.log(`✅ Existing customer profile updated: ${customerResult.customerId}`)
+          } else {
+            console.log(`✅ New customer - email will be saved with order`)
+          }
+        }
+        
+        // Create the order
         const billbeeResult = await billbeeAPI.createOrder({
-          orderId: docRef.id,
+          orderId: orderId,
           paymentIntentId: paymentIntent.id,
           customerInfo: orderData.customerInfo,
           items: orderItems,
@@ -120,7 +161,7 @@ export async function POST(request: NextRequest) {
 
         if (billbeeResult.success && billbeeResult.billbeeOrderId) {
           // Update Firebase order with Billbee information
-          await updateDoc(doc(db, "orders", docRef.id), {
+          await db.collection("orders").doc(orderId).update({
             billbeeOrderId: billbeeResult.billbeeOrderId,
             billbeeStatus: "created",
           })
@@ -129,7 +170,7 @@ export async function POST(request: NextRequest) {
           const invoiceResult = await billbeeAPI.createInvoice(billbeeResult.billbeeOrderId)
 
           if (invoiceResult.success && invoiceResult.invoiceId) {
-            await updateDoc(doc(db, "orders", docRef.id), {
+            await db.collection("orders").doc(orderId).update({
               billbeeInvoiceId: invoiceResult.invoiceId,
               billbeeStatus: "invoiced",
             })
@@ -139,22 +180,25 @@ export async function POST(request: NextRequest) {
         } else {
           console.error("❌ Failed to create Billbee order:", billbeeResult.error)
           // Update status to indicate Billbee integration failed
-          await updateDoc(doc(db, "orders", docRef.id), {
+          await db.collection("orders").doc(orderId).update({
             billbeeStatus: "failed",
             billbeeError: billbeeResult.error,
           })
         }
       } catch (billbeeError) {
         console.error("❌ Billbee integration error:", billbeeError)
-        await updateDoc(doc(db, "orders", docRef.id), {
+        await db.collection("orders").doc(orderId).update({
           billbeeStatus: "failed",
           billbeeError: billbeeError instanceof Error ? billbeeError.message : "Unknown Billbee error",
         })
       }
 
+      // Billbee will handle order confirmation emails
+      console.log("✅ Order completed. Billbee will send confirmations.")
+
       return NextResponse.json({
         success: true,
-        orderId: docRef.id,
+        orderId: orderId,
         order: orderData,
       })
     } else {

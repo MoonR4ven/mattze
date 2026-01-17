@@ -86,9 +86,11 @@ export default function ProductDetailPage() {
         <div className="container mx-auto px-4 py-12">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Product not found</h1>
-            <Button asChild>
-              <Link href="/">Back to Products</Link>
-            </Button>
+            <div suppressHydrationWarning>
+              <Button asChild>
+                <Link href="/">Back to Products</Link>
+              </Button>
+            </div>
           </div>
         </div>
       </div>

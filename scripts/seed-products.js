@@ -1,16 +1,24 @@
 // Script to seed the Firebase database with initial products
-import { initializeApp } from "firebase/app"
-import { getFirestore, collection, addDoc } from "firebase/firestore"
+const dotenv = require("dotenv")
+const { initializeApp } = require("firebase/app")
+const { getFirestore, collection, addDoc } = require("firebase/firestore")
+
+// Load environment variables
+dotenv.config({ path: ".env" })
 
 const firebaseConfig = {
-  // These will be replaced with actual config values
-  apiKey: "your-api-key",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "your-app-id",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
+
+console.log("🔧 Firebase Config:", {
+  projectId: firebaseConfig.projectId,
+  authDomain: firebaseConfig.authDomain,
+})
 
 const app = initializeApp(firebaseConfig)
 const db = getFirestore(app)
@@ -64,9 +72,13 @@ async function seedProducts() {
     }
 
     console.log("✅ Products seeded successfully!")
+    process.exit(0)
   } catch (error) {
     console.error("❌ Error seeding products:", error)
+    process.exit(1)
   }
 }
+
+seedProducts()
 
 seedProducts()

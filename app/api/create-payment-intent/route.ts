@@ -10,14 +10,20 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { amount, currency = "eur", customerInfo, items } = body
 
-    // Create payment intent
+    console.log("💰 Creating payment intent for amount:", amount, "cents (", amount / 100, "euros )")
+
+    // Create payment intent (amount is already in cents from frontend)
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Convert to cents
+      amount: amount, // Already in cents, no need to multiply again
       currency,
       metadata: {
         customerName: `${customerInfo.firstName} ${customerInfo.lastName}`,
         customerEmail: customerInfo.email,
         customerPhone: customerInfo.phone,
+        customerAddress: customerInfo.address || "",
+        customerCity: customerInfo.city || "",
+        customerPostalCode: customerInfo.postalCode || "",
+        customerCountry: customerInfo.country || "NL",
         itemCount: items.length.toString(),
         orderItems: JSON.stringify(
           items.map((item: any) => ({
@@ -25,6 +31,7 @@ export async function POST(request: NextRequest) {
             name: item.name,
             quantity: item.quantity,
             price: item.price,
+            numberOfDays: item.numberOfDays || 1,
             selectedDate: item.selectedDate,
             selectedTime: item.selectedTime,
           })),
@@ -39,6 +46,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error("Error creating payment intent:", error)
-    return NextResponse.json({ error: "Failed to create payment intent" }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }

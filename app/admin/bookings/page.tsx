@@ -27,6 +27,49 @@ interface Booking {
   calendarError?: string
 }
 
+// Helper to safely convert Firestore timestamp to Date
+const toDate = (value: any): Date => {
+  if (!value) return new Date()
+  try {
+    // Firestore Timestamp has toDate() method
+    if (value.toDate && typeof value.toDate === 'function') return value.toDate()
+    // String date
+    if (typeof value === 'string') return new Date(value)
+    // Already a Date
+    if (value instanceof Date) return value
+    // Unix timestamp
+    if (typeof value === 'number') return new Date(value)
+  } catch (e) {
+    console.error('Error converting date:', e)
+  }
+  return new Date()
+}
+
+// Safe format helper for dates
+const safeFormat = (date: any, formatStr: string): string => {
+  try {
+    return format(toDate(date), formatStr)
+  } catch (e) {
+    console.error('Error formatting date:', e)
+    return "N/A"
+  }
+}
+
+// Safe format helper for start/end times
+const formatTime = (time: any): string => {
+  if (!time) return "00:00"
+  try {
+    if (typeof time === 'string') return time
+    if (time.toDate && typeof time.toDate === 'function') {
+      return time.toDate().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    }
+    if (time instanceof Date) return time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+  } catch (e) {
+    console.error('Error formatting time:', e)
+  }
+  return "00:00"
+}
+
 export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
@@ -118,10 +161,10 @@ export default function AdminBookingsPage() {
                       <div className="flex items-center gap-2 mt-1">
                         <Calendar className="h-4 w-4" />
                         <div>
-                          <div className="font-medium">{format(new Date(booking.date), "MMM dd, yyyy")}</div>
-                          <div className="text-sm text-muted-foreground flex items-center gap-1">
+                          <div className="font-medium" suppressHydrationWarning>{safeFormat(booking.date, "MMM dd, yyyy")}</div>
+                          <div className="text-sm text-muted-foreground flex items-center gap-1" suppressHydrationWarning>
                             <Clock className="h-3 w-3" />
-                            {booking.startTime} - {booking.endTime}
+                            {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
                           </div>
                         </div>
                       </div>

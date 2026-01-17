@@ -15,34 +15,37 @@ export function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center py-12">
-          <ShoppingCart className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-2xl font-bold mb-2">Your cart is empty</h2>
-          <p className="text-muted-foreground mb-6">Add some products to get started</p>
-          <Link href="/">
-            <Button>Continue Shopping</Button>
-          </Link>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center py-12">
+            <ShoppingCart className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+            <h2 className="text-2xl font-bold mb-2">Your cart is empty</h2>
+            <p className="text-muted-foreground mb-6">Add some products to get started</p>
+            <Button asChild>
+              <Link href="/">Continue Shopping</Link>
+            </Button>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Shopping Cart</h1>
-        <p className="text-muted-foreground">
-          {getTotalItems()} {getTotalItems() === 1 ? "item" : "items"} in your cart
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Shopping Cart</h1>
+          <p className="text-muted-foreground">
+            {getTotalItems()} {getTotalItems() === 1 ? "item" : "items"} in your cart
+          </p>
+        </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-4">
-          {items.map((item, index) => (
-            <Card key={`${item.id}-${item.selectedDate}-${item.selectedTime}-${index}`}>
-              <CardContent className="p-6">
-                <div className="flex gap-4">
+        <div className="grid lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-4">
+            {items.map((item, index) => (
+              <Card key={`${item.id}-${item.selectedDate}-${item.selectedTime}-${index}`}>
+                <CardContent className="p-6">
+                  <div className="flex gap-4">
                   <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-muted">
                     <Image
                       src={item.image || `/placeholder.svg?height=96&width=96&text=${encodeURIComponent(item.name)}`}
@@ -107,25 +110,25 @@ export function CartPage() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            ))}
 
-          <div className="flex justify-between items-center pt-4">
-            <Button variant="outline" onClick={clearCart}>
-              Clear Cart
-            </Button>
-            <Link href="/">
-              <Button variant="ghost">Continue Shopping</Button>
-            </Link>
+            <div className="flex justify-between items-center pt-4" suppressHydrationWarning>
+              <Button variant="outline" onClick={clearCart}>
+                Clear Cart
+              </Button>
+              <Button variant="ghost" asChild>
+                <Link href="/">Continue Shopping</Link>
+              </Button>
+            </div>
           </div>
-        </div>
 
-        <div className="lg:col-span-1">
-          <Card className="sticky top-4">
-            <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
+          <div className="lg:col-span-1">
+            <Card className="sticky top-4">
+              <CardHeader>
+                <CardTitle>Order Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal ({getTotalItems()} items)</span>
                   <span>€{getTotalPrice().toFixed(2)}</span>
@@ -147,16 +150,17 @@ export function CartPage() {
                 <span>€{(getTotalPrice() * 1.21).toFixed(2)}</span>
               </div>
 
-              <Link href="/checkout" className="block">
-                <Button className="w-full" size="lg">
+              <Button asChild className="w-full" size="lg">
+                <Link href="/checkout">
                   Proceed to Checkout
                   <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </Link>
+                </Link>
+              </Button>
 
               <div className="text-xs text-muted-foreground text-center">Secure checkout powered by Stripe</div>
             </CardContent>
-          </Card>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

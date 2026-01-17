@@ -32,7 +32,7 @@ export function ProductCard({ product }: ProductCardProps) {
       numberOfDays: days,
       totalPrice,
       selectedDate: startDate,
-      selectedTime: undefined,
+      selectedTime: "10:00", // Default time: 10:00 AM
     })
     setShowBookingDialog(false)
     router.push('/cart')
@@ -112,7 +112,7 @@ export function ProductCard({ product }: ProductCardProps) {
               e.stopPropagation()
               setShowBookingDialog(true)
             }}
-            disabled={!product.available}
+            disabled={product.available === false}
           >
             <Calendar className="h-4 w-4 mr-2" />
             Book Now

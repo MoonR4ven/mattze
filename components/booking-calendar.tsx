@@ -41,11 +41,11 @@ export function BookingCalendar({ productId, productName }: BookingCalendarProps
       case "confirmed":
         return "bg-green-500"
       case "pending":
-        return "bg-yellow-500"
+        return "bg-[rgb(var(--mavi-bright-blue))]"
       case "cancelled":
         return "bg-red-500"
       default:
-        return "bg-gray-500"
+        return "bg-[rgb(var(--mavi-gray))]"
     }
   }
 

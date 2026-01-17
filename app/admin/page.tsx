@@ -11,6 +11,34 @@ import { Package, Calendar, Users, Euro, TrendingUp, Clock, AlertCircle, Sparkle
 import Link from "next/link"
 import { format } from "date-fns"
 
+// Helper to safely convert Firestore timestamp to Date
+const toDate = (value: any): Date => {
+  if (!value) return new Date()
+  try {
+    // Firestore Timestamp has toDate() method
+    if (value.toDate && typeof value.toDate === 'function') return value.toDate()
+    // String date
+    if (typeof value === 'string') return new Date(value)
+    // Already a Date
+    if (value instanceof Date) return value
+    // Unix timestamp
+    if (typeof value === 'number') return new Date(value)
+  } catch (e) {
+    console.error('Error converting date:', e)
+  }
+  return new Date()
+}
+
+// Safe format helper
+const safeFormat = (date: any, formatStr: string): string => {
+  try {
+    return format(toDate(date), formatStr)
+  } catch (e) {
+    console.error('Error formatting date:', e)
+    return 'Invalid date'
+  }
+}
+
 interface DashboardStats {
   totalProducts: number
   availableProducts: number
@@ -212,8 +240,8 @@ export default function AdminDashboard() {
                       <div className="flex-1">
                         <p className="font-semibold">{booking.productName}</p>
                         <p className="text-sm text-muted-foreground">{booking.customerName}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {format(new Date(booking.date), "MMM dd, yyyy")}
+                        <p className="text-xs text-muted-foreground mt-1" suppressHydrationWarning>
+                          {safeFormat(booking.date, "MMM dd, yyyy")}
                         </p>
                       </div>
                       <div className="text-right">
@@ -233,7 +261,7 @@ export default function AdminDashboard() {
                   </div>
                 )}
               </div>
-              <div className="mt-6">
+              <div className="mt-6" suppressHydrationWarning>
                 <Button
                   asChild
                   variant="outline"
@@ -257,37 +285,43 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <Button
-                  asChild
-                  className="w-full justify-start bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all"
-                >
-                  <Link href="/admin/products">
-                    <Package className="h-4 w-4 mr-2" />
-                    Manage Products
-                  </Link>
-                </Button>
+                <div suppressHydrationWarning>
+                  <Button
+                    asChild
+                    className="w-full justify-start bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all"
+                  >
+                    <Link href="/admin/products">
+                      <Package className="h-4 w-4 mr-2" />
+                      Manage Products
+                    </Link>
+                  </Button>
+                </div>
 
-                <Button
-                  asChild
-                  variant="outline"
-                  className="w-full justify-start hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] hover:border-[rgb(var(--mavi-blue))] transition-all"
-                >
-                  <Link href="/admin/bookings">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    View Bookings
-                  </Link>
-                </Button>
+                <div suppressHydrationWarning>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="w-full justify-start hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] hover:border-[rgb(var(--mavi-blue))] transition-all"
+                  >
+                    <Link href="/admin/bookings">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      View Bookings
+                    </Link>
+                  </Button>
+                </div>
 
-                <Button
-                  asChild
-                  variant="outline"
-                  className="w-full justify-start hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] hover:border-[rgb(var(--mavi-blue))] transition-all"
-                >
-                  <Link href="/admin/customers">
-                    <Users className="h-4 w-4 mr-2" />
-                    Customer Management
-                  </Link>
-                </Button>
+                <div suppressHydrationWarning>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="w-full justify-start hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] hover:border-[rgb(var(--mavi-blue))] transition-all"
+                  >
+                    <Link href="/admin/customers">
+                      <Users className="h-4 w-4 mr-2" />
+                      Customer Management
+                    </Link>
+                  </Button>
+                </div>
 
                 <div className="pt-4 border-t">
                   <div className="p-4 rounded-xl bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 border border-[rgb(var(--mavi-blue))]/20">
