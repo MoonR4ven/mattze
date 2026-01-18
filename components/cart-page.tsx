@@ -123,7 +123,7 @@ export function CartPage() {
           </div>
 
           <div className="lg:col-span-1">
-            <Card className="sticky top-4">
+            <Card className="sticky top-4 bg-slate-100">
               <CardHeader>
                 <CardTitle>Order Summary</CardTitle>
               </CardHeader>

@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Lock, CreditCard, AlertCircle } from "lucide-react"
 import { useCart } from "@/hooks/use-cart"
 import { useRouter } from "next/navigation"
+import { useI18n } from "@/contexts/i18n-context"
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
@@ -79,6 +80,11 @@ function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
           const result = await confirmResponse.json()
 
           if (result.success) {
+            // Store order data in sessionStorage for success page
+            sessionStorage.setItem("lastOrder", JSON.stringify({
+              customerInfo,
+              items,
+            }))
             clearCart()
             router.push("/checkout/success")
           } else {
@@ -101,7 +107,7 @@ function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
   }
 
   return (
-    <Card>
+    <Card className="bg-slate-100">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CreditCard className="h-5 w-5" />
@@ -140,10 +146,10 @@ function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
             >
               Back
             </Button>
-            <Button type="submit" className="flex-1" disabled={!stripe || processing}>
+            <Button type="submit" className="flex-1 bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 text-[rgb(var(--mavi-dark-teal))] font-semibold hover:text-black shadow-lg transition-all" disabled={!stripe || processing}>
               {processing ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
                   Processing...
                 </>
               ) : (
@@ -162,6 +168,7 @@ function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
 
 export function StripePaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
   const { items, getTotalPrice } = useCart()
+  const { locale } = useI18n()
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -181,6 +188,7 @@ export function StripePaymentForm({ customerInfo, onBack }: StripePaymentFormPro
             currency: "eur",
             customerInfo,
             items: items,
+            locale: locale,
           }),
         })
 
@@ -203,7 +211,7 @@ export function StripePaymentForm({ customerInfo, onBack }: StripePaymentFormPro
 
   if (loading) {
     return (
-      <Card>
+      <Card className="bg-slate-100">
         <CardContent className="p-6">
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -215,7 +223,7 @@ export function StripePaymentForm({ customerInfo, onBack }: StripePaymentFormPro
 
   if (error) {
     return (
-      <Card>
+      <Card className="bg-slate-100">
         <CardContent className="p-6">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />

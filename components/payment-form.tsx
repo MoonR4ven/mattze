@@ -74,7 +74,7 @@ export function PaymentForm({ customerInfo, onBack }: PaymentFormProps) {
   }
 
   return (
-    <Card>
+    <Card className="bg-slate-100">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CreditCard className="h-5 w-5" />

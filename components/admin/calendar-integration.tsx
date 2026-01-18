@@ -165,7 +165,7 @@ export function CalendarIntegration({ booking, onBookingUpdate }: CalendarIntegr
   }
 
   return (
-    <Card>
+    <Card className="bg-slate-100">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5" />

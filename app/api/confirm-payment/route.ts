@@ -73,6 +73,18 @@ export async function POST(request: NextRequest) {
       const orderRef = await db.collection("orders").add(orderData)
       const orderId = orderRef.id
 
+      // Generate custom order number format: XXXXX/year/month
+      const now = new Date()
+      const year = now.getFullYear()
+      const month = String(now.getMonth() + 1).padStart(2, '0')
+      const orderCounter = Math.floor(Math.random() * 90000) + 10000 // Generate 5-digit number
+      const customOrderNumber = `${orderCounter}/${year}/${month}`
+
+      // Update the order with the custom order number
+      await db.collection("orders").doc(orderId).update({
+        customOrderNumber: customOrderNumber,
+      })
+
       const calendarAPI = new GoogleCalendarAPI()
       const calendarId = process.env.GOOGLE_CALENDAR_ID || "primary"
 
@@ -162,14 +174,34 @@ export async function POST(request: NextRequest) {
           }
         }
         
+        // Get payment method details from Stripe
+        const paymentMethodType = paymentIntent.payment_method_types?.[0] || "card"
+        const paymentMethodName = {
+          "card": "Credit/Debit Card",
+          "klarna": "Klarna",
+          "amazon_pay": "Amazon Pay",
+          "bancontact": "Bancontact",
+          "eps": "EPS",
+          "ideal": "iDEAL",
+          "sepa_debit": "SEPA Direct Debit",
+          "paypal": "PayPal"
+        }[paymentMethodType] || paymentMethodType.toUpperCase()
+        
         // Create the order
         const billbeeResult = await billbeeAPI.createOrder({
-          orderId: orderId,
+          orderId: customOrderNumber,
           paymentIntentId: paymentIntent.id,
           customerInfo: orderData.customerInfo,
-          items: orderItems,
+          items: orderItems.map(item => ({
+            ...item,
+            startDate: item.startDate, // Pass startDate for calendar generation
+            endDate: item.endDate, // Pass endDate for calendar generation
+            startTime: item.startTime, // Pass startTime for calendar generation
+          })),
           totalAmount: orderData.totalAmount,
           currency: orderData.currency,
+          locale: paymentIntent.metadata.locale || "en",
+          paymentMethod: paymentMethodName,
         })
 
         if (billbeeResult.success && billbeeResult.billbeeOrderId) {

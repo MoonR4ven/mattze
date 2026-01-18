@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { useCart } from "@/hooks/use-cart"
+import { useI18n } from "@/contexts/i18n-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -32,6 +33,7 @@ interface CustomerInfo {
 
 export function CheckoutPage() {
   const { items, getTotalPrice, getTotalItems } = useCart()
+  const { t } = useI18n()
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     firstName: "",
     lastName: "",
@@ -40,7 +42,7 @@ export function CheckoutPage() {
     address: "",
     city: "",
     postalCode: "",
-    country: "Netherlands",
+    country: "",
     notes: "",
   })
   const [currentStep, setCurrentStep] = useState<"info" | "payment">("info")
@@ -51,10 +53,10 @@ export function CheckoutPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="text-center py-12">
           <ShoppingCart className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-2xl font-bold mb-2">Your cart is empty</h2>
-          <p className="text-muted-foreground mb-6">Add some products to checkout</p>
+          <h2 className="text-2xl font-bold mb-2">{t("cart.empty")}</h2>
+          <p className="text-muted-foreground mb-6">{t("cart.emptyDescription")}</p>
           <Link href="/">
-            <Button>Continue Shopping</Button>
+            <Button>{t("cart.continueShopping")}</Button>
           </Link>
         </div>
       </div>
@@ -85,29 +87,29 @@ export function CheckoutPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-2">Checkout</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">{t("checkout.title")}</h1>
         <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground overflow-x-auto pb-2">
-          <div className={`flex items-center gap-1.5 sm:gap-2 whitespace-nowrap ${currentStep === "info" ? "text-primary" : ""}`}>
+          <div className={`flex items-center gap-1.5 sm:gap-2 whitespace-nowrap transition-colors duration-300 ${currentStep === "info" ? "text-[rgb(var(--mavi-blue))]" : ""}`}>
             <div
-              className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs ${
-                currentStep === "info" ? "bg-primary text-primary-foreground" : "bg-muted"
+              className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-300 ${
+                currentStep === "info" ? "bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] text-white shadow-lg scale-110" : "bg-muted text-muted-foreground"
               }`}
             >
               1
             </div>
-            <span className="hidden sm:inline">Customer Information</span>
-            <span className="sm:hidden">Info</span>
+            <span className="hidden sm:inline">{t("checkout.customerInfo")}</span>
+            <span className="sm:hidden">{t("checkout.info")}</span>
           </div>
-          <div className="w-4 sm:w-8 h-px bg-border flex-shrink-0" />
-          <div className={`flex items-center gap-1.5 sm:gap-2 whitespace-nowrap ${currentStep === "payment" ? "text-primary" : ""}`}>
+          <div className={`h-px flex-shrink-0 transition-colors duration-300 ${currentStep === "info" ? "w-4 sm:w-8 bg-border" : "w-4 sm:w-8 bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))]"}`} />
+          <div className={`flex items-center gap-1.5 sm:gap-2 whitespace-nowrap transition-colors duration-300 ${currentStep === "payment" ? "text-[rgb(var(--mavi-blue))]" : ""}`}>
             <div
-              className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs ${
-                currentStep === "payment" ? "bg-primary text-primary-foreground" : "bg-muted"
+              className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-300 ${
+                currentStep === "payment" ? "bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] text-white shadow-lg scale-110" : "bg-muted text-muted-foreground"
               }`}
             >
               2
             </div>
-            <span>Payment</span>
+            <span>{t("checkout.payment")}</span>
           </div>
         </div>
       </div>
@@ -115,18 +117,18 @@ export function CheckoutPage() {
       <div className="grid lg:grid-cols-3 gap-6 sm:gap-8">
         <div className="lg:col-span-2 order-2 lg:order-1">
           {currentStep === "info" ? (
-            <Card>
+            <Card className="bg-slate-100">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <User className="h-5 w-5" />
-                  Customer Information
+                  {t("checkout.customerInfo")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleInfoSubmit} className="space-y-4 sm:space-y-6">
                   <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name *</Label>
+                      <Label htmlFor="firstName">{t("checkout.firstName")}</Label>
                       <Input
                         id="firstName"
                         value={customerInfo.firstName}
@@ -135,7 +137,7 @@ export function CheckoutPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name *</Label>
+                      <Label htmlFor="lastName">{t("checkout.lastName")}</Label>
                       <Input
                         id="lastName"
                         value={customerInfo.lastName}
@@ -147,7 +149,7 @@ export function CheckoutPage() {
 
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email *</Label>
+                      <Label htmlFor="email">{t("checkout.email")}</Label>
                       <Input
                         id="email"
                         type="email"
@@ -157,7 +159,7 @@ export function CheckoutPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="phone">Phone *</Label>
+                      <Label htmlFor="phone">{t("checkout.phone")}</Label>
                       <Input
                         id="phone"
                         type="tel"
@@ -169,7 +171,7 @@ export function CheckoutPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="address">Address *</Label>
+                    <Label htmlFor="address">{t("checkout.address")}</Label>
                     <Input
                       id="address"
                       value={customerInfo.address}
@@ -180,7 +182,7 @@ export function CheckoutPage() {
 
                   <div className="grid md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="city">City *</Label>
+                      <Label htmlFor="city">{t("checkout.city")}</Label>
                       <Input
                         id="city"
                         value={customerInfo.city}
@@ -189,7 +191,7 @@ export function CheckoutPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="postalCode">Postal Code *</Label>
+                      <Label htmlFor="postalCode">{t("checkout.postalCode")}</Label>
                       <Input
                         id="postalCode"
                         value={customerInfo.postalCode}
@@ -198,7 +200,7 @@ export function CheckoutPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="country">Country *</Label>
+                      <Label htmlFor="country">{t("checkout.country")}</Label>
                       <Input
                         id="country"
                         value={customerInfo.country}
@@ -209,18 +211,18 @@ export function CheckoutPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="notes">Special Instructions (Optional)</Label>
+                    <Label htmlFor="notes">{t("checkout.notes")}</Label>
                     <Textarea
                       id="notes"
                       value={customerInfo.notes}
                       onChange={(e) => updateCustomerInfo("notes", e.target.value)}
-                      placeholder="Any special delivery instructions or notes..."
+                      placeholder={t("checkout.deliveryInstructions")}
                       rows={3}
                     />
                   </div>
 
-                  <Button type="submit" className="w-full h-10 sm:h-11 text-sm sm:text-base bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 text-white border-2 border-white/20 shadow-lg transition-all" disabled={!isInfoComplete()}>
-                    Continue to Payment
+                  <Button type="submit" className="w-full h-10 sm:h-11 text-sm sm:text-base bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 text-[rgb(var(--mavi-dark-teal))] font-semibold border-2 border-white/20 shadow-lg transition-all hover:text-black" disabled={!isInfoComplete()}>
+                    {t("checkout.continuePayment")}
                   </Button>
                 </form>
               </CardContent>
@@ -233,14 +235,14 @@ export function CheckoutPage() {
         <div className="lg:col-span-1 order-1 lg:order-2">
           <CheckoutSummary />
 
-          <Card className="mt-6">
+          <Card className="mt-6 bg-slate-100">
             <Collapsible open={isOrderItemsOpen} onOpenChange={setIsOrderItemsOpen}>
               <CardHeader className="cursor-pointer" onClick={() => setIsOrderItemsOpen(!isOrderItemsOpen)}>
                 <CollapsibleTrigger className="flex items-center justify-between w-full">
-                  <CardTitle className="text-lg">Order Items</CardTitle>
+                  <CardTitle className="text-lg">{t("checkout.orderItems")}</CardTitle>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="text-xs">
-                      {getTotalItems()} {getTotalItems() === 1 ? 'item' : 'items'}
+                      {getTotalItems()} {getTotalItems() === 1 ? t("checkout.item") : t("checkout.items")}
                     </Badge>
                     <ChevronDown className={`h-4 w-4 transition-transform ${isOrderItemsOpen ? 'rotate-180' : ''}`} />
                   </div>
@@ -259,7 +261,7 @@ export function CheckoutPage() {
                         </div>
                         <div className="text-right">
                           <div className="font-medium">€{(item.price * item.quantity).toFixed(2)}</div>
-                          <div className="text-xs text-muted-foreground">Qty: {item.quantity}</div>
+                          <div className="text-xs text-muted-foreground">{t("checkout.qty")}: {item.quantity}</div>
                         </div>
                       </div>
 

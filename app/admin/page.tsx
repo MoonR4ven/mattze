@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Package, Calendar, Users, Euro, TrendingUp, Clock, AlertCircle, Sparkles, ArrowUpRight } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
+import { useI18n } from "@/contexts/i18n-context"
 
 // Helper to safely convert Firestore timestamp to Date
 const toDate = (value: any): Date => {
@@ -68,6 +69,7 @@ export default function AdminDashboard() {
   })
   const [recentBookings, setRecentBookings] = useState<RecentBooking[]>([])
   const [loading, setLoading] = useState(true)
+  const { t } = useI18n()
 
   useEffect(() => {
     fetchDashboardData()
@@ -154,12 +156,12 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-[#d9d9d9]">
         <div className="container mx-auto px-4 py-12">
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="text-center space-y-4 animate-fade-in">
               <div className="w-16 h-16 mx-auto border-4 border-[rgb(var(--mavi-blue))] border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-muted-foreground">Loading dashboard...</p>
+              <p className="text-muted-foreground">{t("admin.loadingDashboard")}</p>
             </div>
           </div>
         </div>
@@ -168,7 +170,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#d9d9d9]">
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         <div className="mb-6 animate-slide-up">
           <div className="flex items-center gap-3 mb-2">
@@ -177,17 +179,17 @@ export default function AdminDashboard() {
             </div>
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
-                Dashboard
+                {t("admin.dashboard")}
               </h1>
-              <p className="text-sm text-muted-foreground">Overview of your rental business</p>
+              <p className="text-sm text-muted-foreground">{t("admin.overview")}</p>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer overflow-hidden animate-fade-in" style={{ animationDelay: '0ms' }}>
+          <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer overflow-hidden animate-fade-in bg-slate-100" style={{ animationDelay: '0ms' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+              <CardTitle className="text-sm font-medium">{t("admin.totalProducts")}</CardTitle>
               <div className="p-2 rounded-lg bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10">
                 <Package className="h-4 w-4 text-[rgb(var(--mavi-blue))]" />
               </div>
@@ -196,13 +198,13 @@ export default function AdminDashboard() {
               <div className="text-3xl font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
                 {stats.totalProducts}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">{stats.availableProducts} available</p>
+              <p className="text-xs text-muted-foreground mt-1">{stats.availableProducts} {t("admin.availableProducts")}</p>
             </CardContent>
           </Card>
 
-          <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer overflow-hidden animate-fade-in" style={{ animationDelay: '50ms' }}>
+          <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer overflow-hidden animate-fade-in bg-slate-100" style={{ animationDelay: '50ms' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
+              <CardTitle className="text-sm font-medium">{t("admin.totalBookings")}</CardTitle>
               <div className="p-2 rounded-lg bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10">
                 <Calendar className="h-4 w-4 text-[rgb(var(--mavi-blue))]" />
               </div>
@@ -211,13 +213,13 @@ export default function AdminDashboard() {
               <div className="text-3xl font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
                 {stats.totalBookings}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">{stats.pendingBookings} pending</p>
+              <p className="text-xs text-muted-foreground mt-1">{stats.pendingBookings} {t("admin.pendingBookings")}</p>
             </CardContent>
           </Card>
 
-          <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer overflow-hidden animate-fade-in" style={{ animationDelay: '100ms' }}>
+          <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer overflow-hidden animate-fade-in bg-slate-100" style={{ animationDelay: '100ms' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+              <CardTitle className="text-sm font-medium">{t("admin.totalRevenue")}</CardTitle>
               <div className="p-2 rounded-lg bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10">
                 <Euro className="h-4 w-4 text-[rgb(var(--mavi-blue))]" />
               </div>
@@ -226,13 +228,13 @@ export default function AdminDashboard() {
               <div className="text-3xl font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
                 €{stats.totalRevenue.toFixed(2)}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">All time</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("admin.allTime")}</p>
             </CardContent>
           </Card>
 
-          <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer overflow-hidden animate-fade-in" style={{ animationDelay: '150ms' }}>
+          <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer overflow-hidden animate-fade-in bg-slate-100" style={{ animationDelay: '150ms' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
+              <CardTitle className="text-sm font-medium">{t("admin.monthlyRevenue")}</CardTitle>
               <div className="p-2 rounded-lg bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10">
                 <TrendingUp className="h-4 w-4 text-[rgb(var(--mavi-blue))]" />
               </div>
@@ -243,18 +245,18 @@ export default function AdminDashboard() {
               </div>
               <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
                 <TrendingUp className="h-3 w-3" />
-                +12% from last month
+                {t("admin.growthLastMonth")}
               </p>
             </CardContent>
           </Card>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-lg transition-all duration-300 animate-fade-in" style={{ animationDelay: '200ms' }}>
+          <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-lg transition-all duration-300 animate-fade-in bg-slate-100" style={{ animationDelay: '200ms' }}>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Clock className="h-5 w-5 text-[rgb(var(--mavi-blue))]" />
-                Recent Bookings
+                {t("admin.recentBookings")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -285,7 +287,7 @@ export default function AdminDashboard() {
                     <div className="mx-auto mb-3 p-3 rounded-2xl bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 w-fit">
                       <Calendar className="h-10 w-10 text-[rgb(var(--mavi-blue))]" />
                     </div>
-                    <p className="text-sm text-muted-foreground">No recent bookings</p>
+                    <p className="text-sm text-muted-foreground">{t("admin.noRecentBookings")}</p>
                   </div>
                 )}
               </div>
@@ -296,7 +298,7 @@ export default function AdminDashboard() {
                   className="w-full hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] hover:border-[rgb(var(--mavi-blue))] transition-all group"
                 >
                   <Link href="/admin/bookings">
-                    View All Bookings
+                    {t("admin.viewAllBookings")}
                     <ArrowUpRight className="h-4 w-4 ml-2 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                   </Link>
                 </Button>
@@ -304,11 +306,11 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-lg transition-all duration-300 animate-fade-in" style={{ animationDelay: '250ms' }}>
+          <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-lg transition-all duration-300 animate-fade-in bg-slate-100" style={{ animationDelay: '250ms' }}>
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <AlertCircle className="h-5 w-5 text-[rgb(var(--mavi-blue))]" />
-                Quick Actions
+                {t("admin.quickActions")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -316,11 +318,11 @@ export default function AdminDashboard() {
                 <div suppressHydrationWarning>
                   <Button
                     asChild
-                    className="w-full justify-start bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 hover:scale-105 transition-all duration-200 shadow-lg"
+                    className="w-full justify-start bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 hover:scale-105 transition-all duration-200 shadow-lg text-[rgb(var(--mavi-dark-teal))] font-semibold hover:text-black"
                   >
                     <Link href="/admin/products">
-                      <Package className="h-4 w-4 mr-2" />
-                      Manage Products
+                      <Package className="h-4 w-4 mr-2 text-[rgb(var(--mavi-dark-teal))]" />
+                      {t("admin.manageProducts")}
                     </Link>
                   </Button>
                 </div>
@@ -333,7 +335,7 @@ export default function AdminDashboard() {
                   >
                     <Link href="/admin/bookings">
                       <Calendar className="h-4 w-4 mr-2" />
-                      View Bookings
+                      {t("admin.viewBookings")}
                     </Link>
                   </Button>
                 </div>
@@ -346,7 +348,7 @@ export default function AdminDashboard() {
                   >
                     <Link href="/admin/customers">
                       <Users className="h-4 w-4 mr-2" />
-                      Customer Management
+                      {t("admin.customerManagement")}
                     </Link>
                   </Button>
                 </div>
@@ -355,14 +357,14 @@ export default function AdminDashboard() {
                   <div className="p-3 rounded-2xl bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 border border-[rgb(var(--mavi-blue))]/20 hover:shadow-md transition-shadow cursor-pointer">
                     <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm">
                       <Sparkles className="h-4 w-4 text-[rgb(var(--mavi-turquoise))]" />
-                      System Status
+                      {t("admin.systemStatus")}
                     </h4>
                     <div className="flex items-center gap-2 text-xs">
                       <span className="relative flex h-3 w-3">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
                       </span>
-                      <span className="font-medium">All systems operational</span>
+                      <span className="font-medium">{t("admin.systemOperational")}</span>
                     </div>
                   </div>
                 </div>

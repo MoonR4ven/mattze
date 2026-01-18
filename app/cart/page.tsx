@@ -17,7 +17,7 @@ export default function Cart() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="container mx-auto px-4 py-8">
-        <Card className="p-8 text-center">
+        <Card className="p-8 text-center bg-slate-100">
           <h1 className="text-2xl font-bold mb-4">Redirecting...</h1>
           <p className="text-muted-foreground mb-6">
             Your shopping cart is now accessible via the cart icon in the header.

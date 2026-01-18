@@ -10,7 +10,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_dummy_key_fo
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { amount, currency = "eur", customerInfo, items } = body
+    const { amount, currency = "eur", customerInfo, items, locale = "en" } = body
 
     console.log("💰 Creating payment intent for amount:", amount, "cents (", amount / 100, "euros )")
 
@@ -28,6 +28,9 @@ export async function POST(request: NextRequest) {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount, // Already in cents, no need to multiply again
       currency,
+      automatic_payment_methods: {
+        enabled: true,
+      },
       metadata: {
         customerName: `${customerInfo.firstName} ${customerInfo.lastName}`,
         customerEmail: customerInfo.email,
@@ -38,6 +41,7 @@ export async function POST(request: NextRequest) {
         customerCountry: customerInfo.country || "NL",
         itemCount: items.length.toString(),
         tempOrderId: tempOrderRef.id, // Reference to Firebase temp order
+        locale: locale,
       },
       receipt_email: customerInfo.email,
     })

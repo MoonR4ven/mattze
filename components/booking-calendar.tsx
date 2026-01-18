@@ -51,7 +51,7 @@ export function BookingCalendar({ productId, productName }: BookingCalendarProps
 
   return (
     <div className="grid md:grid-cols-2 gap-6">
-      <Card>
+      <Card className="bg-slate-100">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CalendarDays className="h-5 w-5" />
@@ -68,7 +68,7 @@ export function BookingCalendar({ productId, productName }: BookingCalendarProps
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="bg-slate-100">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />

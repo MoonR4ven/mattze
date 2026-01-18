@@ -20,7 +20,7 @@ export function FloatingCartButton() {
       className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-30 rounded-full h-14 w-14 sm:h-16 sm:w-16 shadow-2xl hover:scale-110 transition-transform bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90"
     >
       <div className="relative">
-        <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6" />
+        <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-[rgb(var(--mavi-dark-teal))]" />
         {totalItems > 0 && (
           <Badge
             variant="destructive"

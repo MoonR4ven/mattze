@@ -9,9 +9,11 @@ import Image from "next/image"
 import Link from "next/link"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/contexts/i18n-context"
 
 export function CartSidebar() {
   const { items, isOpen, closeCart, removeFromCart, updateQuantity, getTotalPrice, getTotalItems } = useCart()
+  const { t } = useI18n()
 
   return (
     <>
@@ -19,14 +21,14 @@ export function CartSidebar() {
 
       <div
         className={cn(
-          "fixed right-0 top-0 h-full w-full md:w-[400px] bg-white border-l shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col",
+          "fixed right-0 top-0 h-full w-full md:w-[400px] bg-[#d9d9d9] border-l shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col",
           isOpen ? "translate-x-0" : "translate-x-full",
         )}
       >
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-2">
             <ShoppingCart className="h-5 w-5" />
-            <h2 className="font-semibold text-lg">Shopping Cart</h2>
+            <h2 className="font-semibold text-lg">{t("cart.title")}</h2>
             {items.length > 0 && (
               <Badge variant="secondary" className="ml-2">
                 {getTotalItems()}
@@ -42,9 +44,9 @@ export function CartSidebar() {
           <div className="flex-1 flex items-center justify-center p-8">
             <div className="text-center">
               <ShoppingCart className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <h3 className="font-semibold mb-2">Your cart is empty</h3>
-              <p className="text-sm text-muted-foreground mb-4">Add some products to get started</p>
-              <Button onClick={closeCart}>Continue Shopping</Button>
+              <h3 className="font-semibold mb-2">{t("cart.empty")}</h3>
+              <p className="text-sm text-muted-foreground mb-4">{t("cart.emptyDescription")}</p>
+              <Button onClick={closeCart}>{t("cart.continueShopping")}</Button>
             </div>
           </div>
         ) : (
@@ -128,31 +130,31 @@ export function CartSidebar() {
               ))}
             </div>
 
-            <div className="border-t p-4 space-y-4 bg-white">
+            <div className="border-t p-4 space-y-4 bg-[#d9d9d9]">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="text-muted-foreground">{t("cart.subtotal")}</span>
                   <span className="font-medium">€{getTotalPrice().toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Tax (21%)</span>
+                  <span className="text-muted-foreground">{t("cart.tax")}</span>
                   <span className="font-medium">€{(getTotalPrice() * 0.21).toFixed(2)}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between font-semibold text-lg">
-                  <span>Total</span>
+                  <span>{t("cart.total")}</span>
                   <span>€{(getTotalPrice() * 1.21).toFixed(2)}</span>
                 </div>
               </div>
 
               <Link href="/checkout" onClick={closeCart}>
-                <Button className="w-full bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 text-white border-2 border-white/20 shadow-lg transition-all" size="lg">
-                  Proceed to Checkout
+                <Button className="w-full bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 text-[rgb(var(--mavi-dark-teal))] font-semibold border-2 border-white/20 shadow-lg transition-all hover:text-black" size="lg">
+                  {t("cart.proceedCheckout")}
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </Link>
 
-              <div className="text-xs text-muted-foreground text-center">Secure checkout powered by Stripe</div>
+              <div className="text-xs text-muted-foreground text-center">{t("cart.poweredByStripe")}</div>
             </div>
           </>
         )}

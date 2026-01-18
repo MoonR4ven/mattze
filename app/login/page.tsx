@@ -1,17 +1,17 @@
 "use client"
 
 import { useState } from "react"
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth"
+import { signInWithEmailAndPassword } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CircleAlert as AlertCircle, Lock, Mail, Sparkles } from "lucide-react"
 import Link from "next/link"
+import { useI18n } from "@/contexts/i18n-context"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -19,6 +19,7 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const { t } = useI18n()
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,22 +30,7 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, email, password)
       router.push("/admin")
     } catch (err: any) {
-      setError(err.message || "Failed to sign in")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setLoading(true)
-
-    try {
-      await createUserWithEmailAndPassword(auth, email, password)
-      router.push("/admin")
-    } catch (err: any) {
-      setError(err.message || "Failed to create account")
+      setError(err.message || t("login.error"))
     } finally {
       setLoading(false)
     }
@@ -62,169 +48,78 @@ export default function LoginPage() {
               <div className="text-4xl font-light text-foreground transition-all group-hover:scale-105">Rent</div>
             </div>
           </Link>
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 border border-[rgb(var(--mavi-blue))]/20">
-            <Lock className="h-3 w-3 text-[rgb(var(--mavi-blue))]" />
-            <span className="text-xs font-medium text-[rgb(var(--mavi-blue))]">Admin Portal</span>
-          </div>
         </div>
 
-        <Tabs defaultValue="signin" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 p-1 bg-muted/50">
-            <TabsTrigger
-              value="signin"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[rgb(var(--mavi-blue))] data-[state=active]:to-[rgb(var(--mavi-turquoise))] data-[state=active]:text-white"
-            >
-              Sign In
-            </TabsTrigger>
-            <TabsTrigger
-              value="signup"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[rgb(var(--mavi-blue))] data-[state=active]:to-[rgb(var(--mavi-turquoise))] data-[state=active]:text-white"
-            >
-              Sign Up
-            </TabsTrigger>
-          </TabsList>
+        <Card className="border-2 border-transparent hover:border-[rgb(var(--mavi-blue))]/20 transition-all bg-slate-100">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-[rgb(var(--mavi-blue))]" />
+              {t("login.title")}
+            </CardTitle>
+            <CardDescription>{t("login.description")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSignIn} className="space-y-4">
+              {error && (
+                <Alert variant="destructive" className="animate-shake">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
 
-          <TabsContent value="signin" className="mt-6">
-            <Card className="border-2 border-transparent hover:border-[rgb(var(--mavi-blue))]/20 transition-all">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-[rgb(var(--mavi-blue))]" />
-                  Sign In
-                </CardTitle>
-                <CardDescription>Enter your credentials to access the admin panel</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  {error && (
-                    <Alert variant="destructive" className="animate-shake">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  )}
+              <div className="space-y-2">
+                <Label htmlFor="signin-email" className="text-sm font-semibold">
+                  {t("login.email")}
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="signin-email"
+                    type="email"
+                    placeholder={t("login.emailPlaceholder")}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="pl-10 h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
+                  />
+                </div>
+              </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-email" className="text-sm font-semibold">
-                      Email
-                    </Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signin-email"
-                        type="email"
-                        placeholder="admin@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        className="pl-10 h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
-                      />
-                    </div>
-                  </div>
+              <div className="space-y-2">
+                <Label htmlFor="signin-password" className="text-sm font-semibold">
+                  {t("login.password")}
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="signin-password"
+                    type="password"
+                    placeholder={t("login.passwordPlaceholder")}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="pl-10 h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
+                  />
+                </div>
+              </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-password" className="text-sm font-semibold">
-                      Password
-                    </Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signin-password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        className="pl-10 h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
-                      />
-                    </div>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full h-12 bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all hover:scale-105 shadow-lg text-base font-semibold"
-                    disabled={loading}
-                  >
-                    {loading ? "Signing in..." : "Sign In"}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="signup" className="mt-6">
-            <Card className="border-2 border-transparent hover:border-[rgb(var(--mavi-blue))]/20 transition-all">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-[rgb(var(--mavi-blue))]" />
-                  Sign Up
-                </CardTitle>
-                <CardDescription>Create a new admin account</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  {error && (
-                    <Alert variant="destructive" className="animate-shake">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  )}
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email" className="text-sm font-semibold">
-                      Email
-                    </Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-email"
-                        type="email"
-                        placeholder="admin@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        className="pl-10 h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password" className="text-sm font-semibold">
-                      Password
-                    </Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        minLength={6}
-                        className="pl-10 h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">Password must be at least 6 characters</p>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full h-12 bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all hover:scale-105 shadow-lg text-base font-semibold"
-                    disabled={loading}
-                  >
-                    {loading ? "Creating account..." : "Sign Up"}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              <Button
+                type="submit"
+                className="w-full h-12 bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all hover:scale-105 shadow-lg text-base font-semibold text-[rgb(var(--mavi-dark-teal))] hover:text-black"
+                disabled={loading}
+              >
+                {loading ? t("login.signingIn") : t("login.signin")}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
         <div className="mt-8 text-center">
           <Link
             href="/"
             className="text-sm text-muted-foreground hover:text-[rgb(var(--mavi-blue))] transition-colors inline-flex items-center gap-1 group"
           >
-            <span>Back to Home</span>
+            <span>{t("login.backToHome")}</span>
             <span className="group-hover:translate-x-1 transition-transform">→</span>
           </Link>
         </div>

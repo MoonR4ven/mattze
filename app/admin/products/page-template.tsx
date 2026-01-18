@@ -153,7 +153,7 @@ export default function AdminCustomersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#d9d9d9]">
+      <div className="min-h-screen bg-gray-50">
         <div className="container mx-auto px-4 py-6 max-w-7xl">
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="text-center space-y-4 animate-fade-in">
@@ -167,7 +167,7 @@ export default function AdminCustomersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#d9d9d9]">
+    <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-4">
@@ -186,7 +186,7 @@ export default function AdminCustomersPage() {
 
           {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-            <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-md transition-all cursor-pointer">
+            <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-md transition-all cursor-pointer bg-slate-100">
               <CardContent className="p-2.5 text-center">
                 <div className="text-xs text-muted-foreground">Total Customers</div>
                 <div className="text-4xl font-bold text-[rgb(var(--mavi-blue))]">

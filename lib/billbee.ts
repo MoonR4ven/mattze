@@ -37,6 +37,117 @@ interface BillbeeOrder {
   Comments: BillbeeComment[]
 }
 
+// Helper function to generate calendar links
+function generateCalendarLinks(
+  productName: string,
+  startDate: string,
+  startTime: string,
+  endDate: string,
+  customerEmail: string,
+  customerName: string,
+  locale: string = "en",
+  endTime?: string
+): string {
+  // Parse dates
+  const [year, month, day] = startDate.split("-")
+  const [hours, minutes] = startTime.split(":")
+  const startDateTime = new Date(`${year}-${month}-${day}T${hours}:${minutes}:00`)
+  
+  // Calculate end time
+  let endDateTime: Date
+  if (endTime) {
+    // Use provided end time
+    const [endYear, endMonth, endDay] = endDate.split("-")
+    const [endHours, endMinutes] = endTime.split(":")
+    endDateTime = new Date(`${endYear}-${endMonth}-${endDay}T${endHours}:${endMinutes}:00`)
+  } else if (startDate === endDate) {
+    // Single day booking - add 1 hour to start time
+    endDateTime = new Date(startDateTime)
+    endDateTime.setHours(endDateTime.getHours() + 1)
+  } else {
+    // Multi-day booking - use end date with same time as start
+    endDateTime = new Date(endDate + "T" + startTime)
+  }
+
+  // Format dates for calendar (YYYYMMDDTHHMMSS format)
+  const formatCalendarDate = (date: Date): string => {
+    const pad = (n: number) => n.toString().padStart(2, "0")
+    return (
+      date.getFullYear() +
+      pad(date.getMonth() + 1) +
+      pad(date.getDate()) +
+      "T" +
+      pad(date.getHours()) +
+      pad(date.getMinutes()) +
+      "00"
+    )
+  }
+
+  const startFormatted = formatCalendarDate(startDateTime)
+  const endFormatted = formatCalendarDate(endDateTime)
+
+  // Translations for calendar text
+  const translations = {
+    en: {
+      title: "Rental",
+      description: "Rental period for {product}. Please contact us if you have any questions.",
+      header: "📅 ADD TO YOUR CALENDAR:",
+      googleCalendar: "Google Calendar",
+      icalNote: "Or copy this iCal data for other calendar apps:",
+    },
+    de: {
+      title: "Mietdauer",
+      description: "Mietdauer für {product}. Bei Fragen kontaktieren Sie uns gerne.",
+      header: "📅 ZU IHREM KALENDER HINZUFÜGEN:",
+      googleCalendar: "Google Kalender",
+      icalNote: "Oder kopieren Sie diese iCal-Daten für andere Kalender-Apps:",
+    },
+  }
+
+  const t = translations[locale as keyof typeof translations] || translations.en
+  const title = `${t.title}: ${productName}`
+  const description = t.description.replace("{product}", productName)
+
+  // Generate Google Calendar link
+  const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
+    title
+  )}&dates=${startFormatted}/${endFormatted}&details=${encodeURIComponent(
+    description
+  )}&location=MaVi%20Rental&sf=true&output=xml`
+
+  // Generate Outlook/Office 365 link
+  const outlookUrl = `https://outlook.office.com/calendar/0/deeplink/compose?subject=${encodeURIComponent(
+    title
+  )}&startdt=${startDateTime.toISOString()}&enddt=${endDateTime.toISOString()}&body=${encodeURIComponent(
+    description
+  )}&location=MaVi%20Rental`
+
+  // Generate iCal data (for download)
+  const icalData = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    `PRODID:-//MaVi Rental//Booking//${locale.toUpperCase()}`,
+    "BEGIN:VEVENT",
+    `UID:${Date.now()}@mavirental.com`,
+    `DTSTAMP:${formatCalendarDate(new Date())}Z`,
+    `DTSTART:${startFormatted}Z`,
+    `DTEND:${endFormatted}Z`,
+    `SUMMARY:${title}`,
+    `DESCRIPTION:${description}`,
+    "LOCATION:MaVi Rental",
+    `ORGANIZER:mailto:info@mavirental.com`,
+    `ATTENDEE:mailto:${customerEmail}`,
+    "STATUS:CONFIRMED",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n")
+
+  return `${t.header}\n\n` +
+    `${t.googleCalendar}: ${googleCalendarUrl}\n\n` +
+    `Outlook/Office 365: ${outlookUrl}\n\n` +
+    `${t.icalNote}\n${icalData}`
+}
+
 export class BillbeeAPI {
   private baseUrl = "https://app.billbee.io/api/v1"
   private apiKey: string
@@ -104,9 +215,16 @@ export class BillbeeAPI {
       quantity: number
       selectedDate?: string
       selectedTime?: string
+      startDate?: string
+      endDate?: string
+      startTime?: string
+      endTime?: string
+      numberOfDays?: number
     }>
     totalAmount: number
     currency: string
+    locale?: string
+    paymentMethod?: string
   }): Promise<{ success: boolean; billbeeOrderId?: string; error?: string }> {
     try {
       const taxRate = 0.21 // 21% VAT
@@ -125,11 +243,37 @@ export class BillbeeAPI {
       })
 
       // Map order items with the correct structure
-      const orderItems = orderData.items.map((item) => {
+      const orderItems = orderData.items.map((item, index) => {
         // Calculate total price: price per day * number of days * quantity
         const numberOfDays = (item as any).numberOfDays || 1
         const itemGross = item.price * numberOfDays * item.quantity
         const itemTax = Math.round((itemGross * 19) / 100 * 100) / 100 // 19% tax
+
+        // Generate calendar link for this item
+        let calendarNote = ""
+        const hasDateRange = item.startDate && item.endDate
+        const hasSingleDate = item.selectedDate && item.selectedTime
+        
+        if (hasDateRange || hasSingleDate) {
+          const startDate = item.startDate || item.selectedDate
+          const endDate = item.endDate || item.selectedDate
+          const startTime = item.startTime || item.selectedTime || "00:00"
+          const endTime = item.endTime
+          
+          if (startDate && endDate) {
+            const calendarLinks = generateCalendarLinks(
+              item.name,
+              startDate,
+              startTime,
+              endDate,
+              orderData.customerInfo.email,
+              `${orderData.customerInfo.firstName} ${orderData.customerInfo.lastName}`,
+              orderData.locale || "en",
+              endTime
+            )
+            calendarNote = `\n\n${calendarLinks}`
+          }
+        }
 
         return {
           Product: {
@@ -142,19 +286,78 @@ export class BillbeeAPI {
           TotalPrice: Math.round(itemGross * 100) / 100,
           TaxAmount: itemTax,
           TaxIndex: 19,
+          Attributes: calendarNote ? [
+            {
+              Name: "Calendar Links",
+              Value: calendarNote
+            }
+          ] : undefined
         }
       })
+
+      // Generate calendar links for all items with dates
+      const locale = orderData.locale || "en"
+      const calendarComments: BillbeeComment[] = []
+      let calendarLinksText = ""
+      
+      orderData.items.forEach((item) => {
+        // Check for date range bookings (startDate/endDate) or single date bookings (selectedDate)
+        const hasDateRange = item.startDate && item.endDate
+        const hasSingleDate = item.selectedDate && item.selectedTime
+        
+        if (hasDateRange || hasSingleDate) {
+          const startDate = item.startDate || item.selectedDate
+          const endDate = item.endDate || item.selectedDate
+          const startTime = item.startTime || item.selectedTime || "00:00"
+          const endTime = item.endTime // Can be undefined
+          
+          if (startDate && endDate) {
+            const calendarLinks = generateCalendarLinks(
+              item.name,
+              startDate,
+              startTime,
+              endDate,
+              orderData.customerInfo.email,
+              `${orderData.customerInfo.firstName} ${orderData.customerInfo.lastName}`,
+              locale,
+              endTime
+            )
+            
+            // Store as plain text instead of in comments array
+            if (calendarLinksText) {
+              calendarLinksText += "\n\n---\n\n"
+            }
+            calendarLinksText += calendarLinks
+          }
+        }
+      })
+
+      // Add a helpful message at the start if we have calendar links
+      if (calendarLinksText) {
+        const welcomeMessage = locale === "de"
+          ? "🎉 Vielen Dank für Ihre Buchung! Klicken Sie auf die Links unten, um Ihre Mietdaten zu Ihrem Kalender hinzuzufügen:"
+          : "🎉 Thank you for your rental! Click the links below to add your rental dates to your calendar:"
+        
+        calendarLinksText = welcomeMessage + "\n\n" + calendarLinksText
+        
+        // Add as a single comment
+        calendarComments.push({
+          Text: calendarLinksText
+        })
+      }
 
       const billbeeOrder = {
         OrderNumber: orderData.orderId,
         ExternalReference: orderData.paymentIntentId,
         State: 1,
         CreatedAt: new Date().toISOString(),
-        PaymentMethod: 1,
+        PaymentMethod: 1, // Billbee numeric code
+        PaymentMethodName: orderData.paymentMethod || "Online Payment",
         ShippingCost: 0.00,
         Currency: "EUR",
         TotalCost: Math.round(orderItems.reduce((sum, item) => sum + item.TotalPrice, 0) * 100) / 100,
         OrderItems: orderItems,
+        // Comments: calendarComments.length > 0 ? calendarComments : undefined, // Temporarily disabled - causing SQL DateTime error
         Customer: {
           FirstName: orderData.customerInfo.firstName,
           LastName: orderData.customerInfo.lastName,

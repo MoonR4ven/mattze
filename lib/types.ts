@@ -5,7 +5,9 @@ export interface Product {
   type: string
   price: number
   image?: string
+  images?: string[]
   available?: boolean
+  inventory?: number
   specifications?: {
     material?: string
     uvProtection?: string

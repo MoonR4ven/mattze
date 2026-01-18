@@ -8,25 +8,31 @@ import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { LayoutDashboard, Package, Calendar, Menu, X, LogOut } from "lucide-react"
+import { LayoutDashboard, Package, Calendar, Settings, Menu, X, LogOut } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
+import { useI18n } from "@/contexts/i18n-context"
 
 const navigation = [
   {
-    name: "Dashboard",
+    nameKey: "admin.dashboard",
     href: "/admin",
     icon: LayoutDashboard,
   },
   {
-    name: "Products",
+    nameKey: "admin.products",
     href: "/admin/products",
     icon: Package,
   },
   {
-    name: "Bookings",
+    nameKey: "admin.bookings",
     href: "/admin/bookings",
     icon: Calendar,
+  },
+  {
+    nameKey: "admin.settingsManagement",
+    href: "/admin/settings",
+    icon: Settings,
   },
 ]
 
@@ -39,6 +45,7 @@ export default function AdminLayout({
   const pathname = usePathname()
   const router = useRouter()
   const { user, loading, signOut } = useAuth()
+  const { t } = useI18n()
 
   useEffect(() => {
     if (!loading && !user) {
@@ -53,7 +60,7 @@ export default function AdminLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="min-h-screen flex items-center justify-center bg-[#d9d9d9]">
         <div className="text-center">Loading...</div>
       </div>
     )
@@ -64,7 +71,7 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#d9d9d9]">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
@@ -73,7 +80,7 @@ export default function AdminLayout({
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed top-[73px] bottom-0 left-0 z-40 w-64 bg-white border-r transform transition-transform duration-200 ease-in-out lg:translate-x-0",
+          "fixed top-[73px] bottom-0 left-0 z-40 w-64 bg-[#d9d9d9] border-r transform transition-transform duration-200 ease-in-out lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
@@ -84,7 +91,7 @@ export default function AdminLayout({
               <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
                 <Package className="h-4 w-4 text-primary-foreground" />
               </div>
-              <span className="font-semibold">Admin Panel</span>
+              <span className="font-semibold">{t("admin.title")}</span>
             </div>
             <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
               <X className="h-4 w-4" />
@@ -97,7 +104,7 @@ export default function AdminLayout({
               const isActive = pathname === item.href
               return (
                 <Link
-                  key={item.name}
+                  key={item.nameKey}
                   href={item.href}
                   className={cn(
                     "flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-300",
@@ -108,7 +115,7 @@ export default function AdminLayout({
                   onClick={() => setSidebarOpen(false)}
                 >
                   <item.icon className="h-5 w-5" />
-                  {item.name}
+                  {t(item.nameKey)}
                 </Link>
               )
             })}
@@ -116,20 +123,17 @@ export default function AdminLayout({
 
           {/* Footer */}
           <div className="p-4 border-t space-y-2">
-            <Card className="border-2">
+            <Card className="border-2 bg-slate-100">
               <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold">Admin User</p>
-                    <p className="text-xs text-muted-foreground">{user?.email}</p>
-                  </div>
-                  <Badge variant="secondary" className="rounded-full px-3 py-1">Admin</Badge>
+                <div>
+                  <p className="text-sm font-semibold">{t("admin.adminUser")}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email}</p>
                 </div>
               </CardContent>
             </Card>
             <Button variant="outline" size="lg" className="w-full border-2" onClick={handleSignOut}>
               <LogOut className="h-5 w-5 mr-2" />
-              Sign Out
+              {t("nav.logout")}
             </Button>
           </div>
         </div>
@@ -138,11 +142,11 @@ export default function AdminLayout({
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Mobile header */}
-        <div className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b-2 bg-white px-4 lg:hidden">
+        <div className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b-2 bg-[#d9d9d9] px-4 lg:hidden">
           <Button variant="ghost" size="default" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
-          <h1 className="font-bold text-lg">Admin Panel</h1>
+          <h1 className="font-bold text-lg">{t("admin.title")}</h1>
         </div>
 
         {/* Page content */}
