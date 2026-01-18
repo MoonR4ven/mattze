@@ -4,6 +4,9 @@ const { GoogleCalendarAPI } = require('./lib/google-calendar')
 async function testServices() {
   console.log('🧪 Testing Email and Calendar Services...\n')
 
+  // Get admin email from environment or use default
+  const adminEmail = process.env.GOOGLE_CALENDAR_ID || 'your-google-calendar-email@gmail.com'
+
   // Test Email
   console.log('📧 Testing Email Service...')
   const emailResult = await emailService.sendBookingConfirmation({
@@ -37,11 +40,5 @@ async function testServices() {
     })
     console.log('Event Created:', JSON.stringify(event, null, 2), '\n')
 
-    const calendarResult = await calendarAPI.createEvent('mavi.ostercappeln@gmail.com', event)
-    console.log('Calendar Result:', calendarResult)
-  } catch (error) {
-    console.error('Calendar Error:', error)
-  }
-}
-
+    const calendarResult = await calendarAPI.createEvent(adminEmail, event)
 testServices().catch(console.error)

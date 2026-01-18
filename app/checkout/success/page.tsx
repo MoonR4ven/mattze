@@ -275,7 +275,7 @@ export default function CheckoutSuccessPage() {
             <div>
               <h3 className="font-medium">{t("success.emailSupport") || "Email Support"}</h3>
               <p className="text-sm text-muted-foreground">
-                mavi.ostercappeln@gmail.com
+                {process.env.NEXT_PUBLIC_CONTACT_EMAIL || "contact@example.com"}
               </p>
             </div>
           </div>
