@@ -91,7 +91,7 @@ const mockProducts = [
 async function seedDatabase() {
   try {
     console.log('🌱 Starting Firebase database seed...')
-    console.log(`📦 Firebase Project: mavi-3ce9d`)
+    console.log(`📦 Firebase Project: ${process.env.FIREBASE_PROJECT_ID || 'default'}`)
 
     // Add products
     console.log('\n📝 Adding products...')
