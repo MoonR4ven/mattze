@@ -6,26 +6,38 @@ import { GoogleCalendarAPI } from "@/lib/google-calendar"
 import { db as clientDb } from "@/lib/firebase"
 import { doc, getDoc, deleteDoc } from "firebase/firestore"
 
-// Initialize Firebase Admin SDK
-if (!admin.apps.length) {
-  const serviceAccount = {
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    clientEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    privateKey: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-  }
+let db: admin.firestore.Firestore
 
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
-  })
+// Lazy initialize Firebase Admin SDK
+function initializeFirebaseAdmin() {
+  if (admin.apps.length === 0) {
+    if (!process.env.FIREBASE_PROJECT_ID || !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
+      throw new Error("Missing Firebase Admin credentials. Ensure FIREBASE_PROJECT_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL, and GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY are set.")
+    }
+
+    const serviceAccount = {
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      privateKey: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.replace(/\\n/g, "\n"),
+    }
+
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+    })
+  }
+  
+  return admin.firestore()
 }
 
-const db = admin.firestore()
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_dummy_key_for_build", {
   apiVersion: "2024-06-20",
 })
 
 export async function POST(request: NextRequest) {
   try {
+    // Initialize Firebase Admin on first request
+    db = initializeFirebaseAdmin()
+    
     const { paymentIntentId } = await request.json()
 
     // Retrieve payment intent from Stripe
