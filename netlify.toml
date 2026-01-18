@@ -1,0 +1,18 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Configure caching for faster rebuilds
+[[edge_functions]]
+
+[build.cache]
+  # Cache node_modules
+  cacheDirectories = [
+    "node_modules/.cache",
+    ".next/cache"
+  ]
