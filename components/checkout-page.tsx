@@ -11,9 +11,10 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { CheckoutSummary } from "@/components/checkout-summary"
 import { StripePaymentForm } from "@/components/stripe-payment-form"
-import { ShoppingCart, User, Calendar, Clock } from "lucide-react"
+import { ShoppingCart, User, Calendar, Clock, ChevronDown } from "lucide-react"
 import { format } from "date-fns"
 import Link from "next/link"
 
@@ -43,6 +44,7 @@ export function CheckoutPage() {
     notes: "",
   })
   const [currentStep, setCurrentStep] = useState<"info" | "payment">("info")
+  const [isOrderItemsOpen, setIsOrderItemsOpen] = useState(true)
 
   if (items.length === 0) {
     return (
@@ -83,22 +85,23 @@ export function CheckoutPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Checkout</h1>
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <div className={`flex items-center gap-2 ${currentStep === "info" ? "text-primary" : ""}`}>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">Checkout</h1>
+        <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground overflow-x-auto pb-2">
+          <div className={`flex items-center gap-1.5 sm:gap-2 whitespace-nowrap ${currentStep === "info" ? "text-primary" : ""}`}>
             <div
-              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+              className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs ${
                 currentStep === "info" ? "bg-primary text-primary-foreground" : "bg-muted"
               }`}
             >
               1
             </div>
-            <span>Customer Information</span>
+            <span className="hidden sm:inline">Customer Information</span>
+            <span className="sm:hidden">Info</span>
           </div>
-          <div className="w-8 h-px bg-border" />
-          <div className={`flex items-center gap-2 ${currentStep === "payment" ? "text-primary" : ""}`}>
+          <div className="w-4 sm:w-8 h-px bg-border flex-shrink-0" />
+          <div className={`flex items-center gap-1.5 sm:gap-2 whitespace-nowrap ${currentStep === "payment" ? "text-primary" : ""}`}>
             <div
-              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+              className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs ${
                 currentStep === "payment" ? "bg-primary text-primary-foreground" : "bg-muted"
               }`}
             >
@@ -109,8 +112,8 @@ export function CheckoutPage() {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
+      <div className="grid lg:grid-cols-3 gap-6 sm:gap-8">
+        <div className="lg:col-span-2 order-2 lg:order-1">
           {currentStep === "info" ? (
             <Card>
               <CardHeader>
@@ -120,8 +123,8 @@ export function CheckoutPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleInfoSubmit} className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-4">
+                <form onSubmit={handleInfoSubmit} className="space-y-4 sm:space-y-6">
+                  <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name *</Label>
                       <Input
@@ -216,7 +219,7 @@ export function CheckoutPage() {
                     />
                   </div>
 
-                  <Button type="submit" className="w-full" disabled={!isInfoComplete()}>
+                  <Button type="submit" className="w-full h-10 sm:h-11 text-sm sm:text-base bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 text-white border-2 border-white/20 shadow-lg transition-all" disabled={!isInfoComplete()}>
                     Continue to Payment
                   </Button>
                 </form>
@@ -227,47 +230,58 @@ export function CheckoutPage() {
           )}
         </div>
 
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 order-1 lg:order-2">
           <CheckoutSummary />
 
-          {/* Order Items */}
           <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="text-lg">Order Items</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {items.map((item, index) => (
-                <div key={`${item.id}-${item.selectedDate}-${item.selectedTime}-${index}`} className="space-y-2">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm">{item.name}</h4>
-                      <Badge variant="secondary" className="text-xs mt-1">
-                        {item.type}
-                      </Badge>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-medium">€{(item.price * item.quantity).toFixed(2)}</div>
-                      <div className="text-xs text-muted-foreground">Qty: {item.quantity}</div>
-                    </div>
+            <Collapsible open={isOrderItemsOpen} onOpenChange={setIsOrderItemsOpen}>
+              <CardHeader className="cursor-pointer" onClick={() => setIsOrderItemsOpen(!isOrderItemsOpen)}>
+                <CollapsibleTrigger className="flex items-center justify-between w-full">
+                  <CardTitle className="text-lg">Order Items</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs">
+                      {getTotalItems()} {getTotalItems() === 1 ? 'item' : 'items'}
+                    </Badge>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${isOrderItemsOpen ? 'rotate-180' : ''}`} />
                   </div>
+                </CollapsibleTrigger>
+              </CardHeader>
+              <CollapsibleContent>
+                <CardContent className="space-y-4">
+                  {items.map((item, index) => (
+                    <div key={`${item.id}-${item.selectedDate}-${item.selectedTime}-${index}`} className="space-y-2">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-sm">{item.name}</h4>
+                          <Badge variant="secondary" className="text-xs mt-1">
+                            {item.type}
+                          </Badge>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-medium">€{(item.price * item.quantity).toFixed(2)}</div>
+                          <div className="text-xs text-muted-foreground">Qty: {item.quantity}</div>
+                        </div>
+                      </div>
 
-                  {item.selectedDate && item.selectedTime && (
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        <span>{format(new Date(item.selectedDate), "MMM dd")}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        <span>{item.selectedTime}</span>
-                      </div>
+                      {item.selectedDate && item.selectedTime && (
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            <span>{format(new Date(item.selectedDate), "MMM dd")}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            <span>{item.selectedTime}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {index < items.length - 1 && <Separator className="mt-3" />}
                     </div>
-                  )}
-
-                  {index < items.length - 1 && <Separator className="mt-3" />}
-                </div>
-              ))}
-            </CardContent>
+                  ))}
+                </CardContent>
+              </CollapsibleContent>
+            </Collapsible>
           </Card>
         </div>
       </div>

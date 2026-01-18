@@ -6,9 +6,10 @@ import { getProducts } from "@/lib/products"
 import { ProductCard } from "./product-card"
 import { Package, Sparkles } from "lucide-react"
 import { Button } from "./ui/button"
+import { useFilter } from "@/contexts/filter-context"
 
 const CATEGORIES = [
-  { id: "all", name: "All Products", icon: Sparkles },
+  { id: "all", name: "All Products", icon: Sparkles, types: [] },
   { id: "events", name: "Events & Party", types: ["Entertainment", "Shelter", "Decoration"] },
   { id: "audio", name: "Audio & Tech", types: ["Audio Equipment"] },
   { id: "furniture", name: "Furniture & More", types: ["Furniture", "Article"] }
@@ -18,7 +19,7 @@ export function ProductGrid() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedCategory, setSelectedCategory] = useState("all")
+  const { selectedCategory } = useFilter()
 
   useEffect(() => {
     async function fetchProducts() {
@@ -81,28 +82,6 @@ export function ProductGrid() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap gap-3 justify-center">
-        {CATEGORIES.map((category, index) => (
-          <Button
-            key={category.id}
-            onClick={() => setSelectedCategory(category.id)}
-            variant={selectedCategory === category.id ? "default" : "outline"}
-            size="lg"
-            className={`
-              transition-all hover:scale-105 animate-fade-in
-              ${selectedCategory === category.id
-                ? 'bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 shadow-lg'
-                : 'hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] hover:border-[rgb(var(--mavi-blue))]'
-              }
-            `}
-            style={{ animationDelay: `${index * 50}ms` }}
-          >
-            {category.icon && <category.icon className="h-4 w-4 mr-2" />}
-            {category.name}
-          </Button>
-        ))}
-      </div>
-
       {filteredProducts.length === 0 ? (
         <div className="text-center py-20 animate-fade-in">
           <div className="mx-auto mb-6 p-6 rounded-3xl bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 w-fit">
@@ -112,7 +91,7 @@ export function ProductGrid() {
           <p className="text-muted-foreground">Try selecting a different category</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 gap-4">
           {filteredProducts.map((product, index) => {
             // Use a combination of id and index to ensure unique keys even with duplicate product IDs
             const uniqueKey = `${product.id}-${index}`

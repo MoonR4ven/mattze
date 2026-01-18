@@ -76,7 +76,7 @@ export function CartSidebar() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => removeFromCart(item.id)}
+                          onClick={() => removeFromCart(item.id, item.startDate, item.endDate, item.selectedDate)}
                           className="text-destructive hover:text-destructive h-8 w-8 p-0"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -103,7 +103,7 @@ export function CartSidebar() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        onClick={() => updateQuantity(item.id, item.quantity - 1, item.startDate, item.endDate, item.selectedDate)}
                         disabled={item.quantity <= 1}
                         className="h-7 w-7 p-0"
                       >
@@ -113,7 +113,7 @@ export function CartSidebar() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.id, item.quantity + 1, item.startDate, item.endDate, item.selectedDate)}
                         className="h-7 w-7 p-0"
                       >
                         <Plus className="h-3 w-3" />
@@ -146,7 +146,7 @@ export function CartSidebar() {
               </div>
 
               <Link href="/checkout" onClick={closeCart}>
-                <Button className="w-full" size="lg">
+                <Button className="w-full bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 text-white border-2 border-white/20 shadow-lg transition-all" size="lg">
                   Proceed to Checkout
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>

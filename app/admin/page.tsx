@@ -75,33 +75,61 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
+      console.log("📊 Fetching dashboard data...")
+      
+      // Fetch products
       const products = await getProducts()
+      console.log("✅ Products fetched:", products.length)
       const availableProducts = products.filter((p) => p.available).length
 
+      // Fetch ALL bookings for accurate stats
       const bookingsRef = collection(db, "bookings")
-      const bookingsQuery = query(bookingsRef, orderBy("createdAt", "desc"), limit(5))
-      const bookingsSnapshot = await getDocs(bookingsQuery)
+      const allBookingsQuery = query(bookingsRef, orderBy("createdAt", "desc"))
+      const allBookingsSnapshot = await getDocs(allBookingsQuery)
+      console.log("✅ Bookings fetched:", allBookingsSnapshot.docs.length)
 
-      const bookingsData = bookingsSnapshot.docs.map((doc) => ({
+      const allBookings = allBookingsSnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as RecentBooking[]
 
-      const totalRevenue = bookingsData.reduce((sum, booking) => sum + booking.price, 0)
-      const pendingBookings = bookingsData.filter((b) => b.status === "pending").length
+      // Calculate stats from all bookings
+      const totalRevenue = allBookings.reduce((sum, booking) => sum + (booking.price || 0), 0)
+      const pendingBookings = allBookings.filter((b) => b.status === "pending").length
+
+      // Calculate monthly revenue (current month)
+      const now = new Date()
+      const currentMonth = now.getMonth()
+      const currentYear = now.getFullYear()
+      const monthlyRevenue = allBookings
+        .filter((b) => {
+          const bookingDate = toDate(b.createdAt)
+          return bookingDate.getMonth() === currentMonth && bookingDate.getFullYear() === currentYear
+        })
+        .reduce((sum, booking) => sum + (booking.price || 0), 0)
+
+      console.log("📊 Stats calculated:", {
+        totalProducts: products.length,
+        availableProducts,
+        totalBookings: allBookings.length,
+        pendingBookings,
+        totalRevenue,
+        monthlyRevenue,
+      })
 
       setStats({
         totalProducts: products.length,
         availableProducts,
-        totalBookings: bookingsData.length,
+        totalBookings: allBookings.length,
         pendingBookings,
         totalRevenue,
-        monthlyRevenue: totalRevenue * 0.8,
+        monthlyRevenue,
       })
 
-      setRecentBookings(bookingsData)
+      // Show only recent 5 bookings in the list
+      setRecentBookings(allBookings.slice(0, 5))
     } catch (error) {
-      console.error("Error fetching dashboard data:", error)
+      console.error("❌ Error fetching dashboard data:", error)
     } finally {
       setLoading(false)
     }
@@ -140,24 +168,24 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="container mx-auto px-4 py-12">
-        <div className="mb-12 animate-slide-up">
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        <div className="mb-6 animate-slide-up">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 rounded-2xl bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 border border-[rgb(var(--mavi-blue))]/20">
-              <Sparkles className="h-8 w-8 text-[rgb(var(--mavi-blue))]" />
+            <div className="p-2.5 rounded-2xl bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 border border-[rgb(var(--mavi-blue))]/20">
+              <Sparkles className="h-7 w-7 text-[rgb(var(--mavi-blue))]" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
                 Dashboard
               </h1>
-              <p className="text-muted-foreground">Overview of your rental business</p>
+              <p className="text-sm text-muted-foreground">Overview of your rental business</p>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="hover-lift border-2 border-transparent hover:border-[rgb(var(--mavi-blue))]/20 transition-all overflow-hidden animate-fade-in" style={{ animationDelay: '0ms' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer overflow-hidden animate-fade-in" style={{ animationDelay: '0ms' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Products</CardTitle>
               <div className="p-2 rounded-lg bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10">
@@ -172,7 +200,7 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="hover-lift border-2 border-transparent hover:border-[rgb(var(--mavi-blue))]/20 transition-all overflow-hidden animate-fade-in" style={{ animationDelay: '50ms' }}>
+          <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer overflow-hidden animate-fade-in" style={{ animationDelay: '50ms' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
               <div className="p-2 rounded-lg bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10">
@@ -187,7 +215,7 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="hover-lift border-2 border-transparent hover:border-[rgb(var(--mavi-blue))]/20 transition-all overflow-hidden animate-fade-in" style={{ animationDelay: '100ms' }}>
+          <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer overflow-hidden animate-fade-in" style={{ animationDelay: '100ms' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
               <div className="p-2 rounded-lg bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10">
@@ -202,7 +230,7 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="hover-lift border-2 border-transparent hover:border-[rgb(var(--mavi-blue))]/20 transition-all overflow-hidden animate-fade-in" style={{ animationDelay: '150ms' }}>
+          <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer overflow-hidden animate-fade-in" style={{ animationDelay: '150ms' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
               <div className="p-2 rounded-lg bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10">
@@ -221,47 +249,47 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <Card className="hover-lift border-2 border-transparent hover:border-[rgb(var(--mavi-blue))]/20 transition-all animate-fade-in" style={{ animationDelay: '200ms' }}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-lg transition-all duration-300 animate-fade-in" style={{ animationDelay: '200ms' }}>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <Clock className="h-5 w-5 text-[rgb(var(--mavi-blue))]" />
                 Recent Bookings
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {recentBookings.length > 0 ? (
                   recentBookings.map((booking) => (
                     <div
                       key={booking.id}
-                      className="flex items-center justify-between p-4 border-2 rounded-xl hover:border-[rgb(var(--mavi-blue))]/30 transition-all"
+                      className="flex items-center justify-between p-3 border-2 rounded-2xl hover:border-[rgb(var(--mavi-blue))]/40 hover:shadow-md transition-all duration-200 cursor-pointer hover:scale-[1.02]"
                     >
                       <div className="flex-1">
-                        <p className="font-semibold">{booking.productName}</p>
-                        <p className="text-sm text-muted-foreground">{booking.customerName}</p>
-                        <p className="text-xs text-muted-foreground mt-1" suppressHydrationWarning>
+                        <p className="font-semibold text-sm">{booking.productName}</p>
+                        <p className="text-xs text-muted-foreground">{booking.customerName}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5" suppressHydrationWarning>
                           {safeFormat(booking.date, "MMM dd, yyyy")}
                         </p>
                       </div>
                       <div className="text-right">
                         {getStatusBadge(booking.status)}
-                        <p className="text-sm font-bold mt-2 text-[rgb(var(--mavi-blue))]">
+                        <p className="text-sm font-bold mt-1.5 text-[rgb(var(--mavi-blue))]">
                           €{booking.price.toFixed(2)}
                         </p>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-12">
-                    <div className="mx-auto mb-4 p-4 rounded-2xl bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 w-fit">
-                      <Calendar className="h-12 w-12 text-[rgb(var(--mavi-blue))]" />
+                  <div className="text-center py-8">
+                    <div className="mx-auto mb-3 p-3 rounded-2xl bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 w-fit">
+                      <Calendar className="h-10 w-10 text-[rgb(var(--mavi-blue))]" />
                     </div>
-                    <p className="text-muted-foreground">No recent bookings</p>
+                    <p className="text-sm text-muted-foreground">No recent bookings</p>
                   </div>
                 )}
               </div>
-              <div className="mt-6" suppressHydrationWarning>
+              <div className="mt-4" suppressHydrationWarning>
                 <Button
                   asChild
                   variant="outline"
@@ -276,19 +304,19 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="hover-lift border-2 border-transparent hover:border-[rgb(var(--mavi-blue))]/20 transition-all animate-fade-in" style={{ animationDelay: '250ms' }}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-lg transition-all duration-300 animate-fade-in" style={{ animationDelay: '250ms' }}>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <AlertCircle className="h-5 w-5 text-[rgb(var(--mavi-blue))]" />
                 Quick Actions
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 <div suppressHydrationWarning>
                   <Button
                     asChild
-                    className="w-full justify-start bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all"
+                    className="w-full justify-start bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 hover:scale-105 transition-all duration-200 shadow-lg"
                   >
                     <Link href="/admin/products">
                       <Package className="h-4 w-4 mr-2" />
@@ -301,7 +329,7 @@ export default function AdminDashboard() {
                   <Button
                     asChild
                     variant="outline"
-                    className="w-full justify-start hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] hover:border-[rgb(var(--mavi-blue))] transition-all"
+                    className="w-full justify-start hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] hover:border-[rgb(var(--mavi-blue))] hover:scale-105 transition-all duration-200"
                   >
                     <Link href="/admin/bookings">
                       <Calendar className="h-4 w-4 mr-2" />
@@ -314,7 +342,7 @@ export default function AdminDashboard() {
                   <Button
                     asChild
                     variant="outline"
-                    className="w-full justify-start hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] hover:border-[rgb(var(--mavi-blue))] transition-all"
+                    className="w-full justify-start hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] hover:border-[rgb(var(--mavi-blue))] hover:scale-105 transition-all duration-200"
                   >
                     <Link href="/admin/customers">
                       <Users className="h-4 w-4 mr-2" />
@@ -323,13 +351,13 @@ export default function AdminDashboard() {
                   </Button>
                 </div>
 
-                <div className="pt-4 border-t">
-                  <div className="p-4 rounded-xl bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 border border-[rgb(var(--mavi-blue))]/20">
-                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                <div className="pt-3 border-t">
+                  <div className="p-3 rounded-2xl bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 border border-[rgb(var(--mavi-blue))]/20 hover:shadow-md transition-shadow cursor-pointer">
+                    <h4 className="font-semibold mb-2 flex items-center gap-2 text-sm">
                       <Sparkles className="h-4 w-4 text-[rgb(var(--mavi-turquoise))]" />
                       System Status
                     </h4>
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2 text-xs">
                       <span className="relative flex h-3 w-3">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>

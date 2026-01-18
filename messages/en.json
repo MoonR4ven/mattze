@@ -1,0 +1,111 @@
+{
+  "nav": {
+    "products": "Products",
+    "admin": "Admin",
+    "contact": "Contact",
+    "login": "Login",
+    "logout": "Logout"
+  },
+  "header": {
+    "title": "MaVi Rent"
+  },
+  "cart": {
+    "title": "Shopping Cart",
+    "empty": "Your cart is empty",
+    "addProducts": "Add some products to get started",
+    "continueShopping": "Continue Shopping",
+    "subtotal": "Subtotal",
+    "tax": "Tax (21%)",
+    "total": "Total",
+    "items": "items",
+    "item": "item",
+    "proceedCheckout": "Proceed to Checkout",
+    "secured": "Secure checkout powered by Stripe"
+  },
+  "product": {
+    "bookNow": "Book Now",
+    "price": "/day",
+    "available": "Available",
+    "addedToCart": "Added to Cart!"
+  },
+  "booking": {
+    "title": "Book",
+    "selectDates": "Select dates and quantity",
+    "quantity": "Quantity",
+    "selectRentalDates": "Select rental dates",
+    "loading": "Loading availability...",
+    "unavailable": "Unavailable",
+    "selected": "Selected",
+    "bookingSummary": "Booking Summary",
+    "from": "From",
+    "to": "To",
+    "duration": "Duration",
+    "day": "day",
+    "days": "days",
+    "qty": "Qty",
+    "addToCart": "Add to Cart",
+    "cancel": "Cancel",
+    "selectDatesMessage": "Select dates to see summary"
+  },
+  "checkout": {
+    "title": "Checkout",
+    "customerInfo": "Customer Information",
+    "payment": "Payment",
+    "info": "Info",
+    "firstName": "First Name *",
+    "lastName": "Last Name *",
+    "email": "Email *",
+    "phone": "Phone *",
+    "address": "Address *",
+    "city": "City *",
+    "postalCode": "Postal Code *",
+    "country": "Country",
+    "notes": "Special Notes (optional)",
+    "continuePayment": "Continue to Payment",
+    "cardDetails": "Card Details",
+    "secure": "Your payment information is secure and encrypted",
+    "acceptedCards": "We accept Visa, Mastercard, American Express, and other major cards.",
+    "back": "Back",
+    "pay": "Pay",
+    "processing": "Processing...",
+    "orderSummary": "Order Summary",
+    "delivery": "Delivery",
+    "free": "Free",
+    "vat": "VAT (21%)",
+    "freeDelivery": "Free delivery within 50km",
+    "setupService": "Setup service available",
+    "support": "24/7 customer support"
+  },
+  "success": {
+    "title": "Order Confirmed",
+    "orderPlaced": "Your order has been placed successfully!",
+    "confirmation": "A confirmation email has been sent to",
+    "viewOrders": "View Your Orders",
+    "continueShopping": "Continue Shopping",
+    "thankYou": "Thank you for your order!"
+  },
+  "orders": {
+    "title": "My Orders",
+    "empty": "You haven't placed any orders yet",
+    "orderNumber": "Order",
+    "orderDate": "Date",
+    "total": "Total",
+    "status": "Status"
+  },
+  "admin": {
+    "title": "Admin Dashboard",
+    "bookings": "Bookings",
+    "customers": "Customers",
+    "products": "Products",
+    "settings": "Settings"
+  },
+  "login": {
+    "title": "Login",
+    "email": "Email",
+    "password": "Password",
+    "signin": "Sign In",
+    "forgotPassword": "Forgot password?",
+    "noAccount": "Don't have an account?",
+    "signUp": "Sign up"
+  }
+}

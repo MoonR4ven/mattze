@@ -5,8 +5,8 @@ import { Inter } from "next/font/google"
 import { Suspense } from "react"
 import { Header } from "@/components/header"
 import { CartSidebar } from "@/components/cart-sidebar"
-import { FloatingCartButton } from "@/components/floating-cart-button"
 import { AuthProvider } from "@/contexts/auth-context"
+import { FilterProvider } from "@/contexts/filter-context"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
@@ -24,10 +24,13 @@ export default function RootLayout({
       </head>
       <body className={`font-sans ${inter.variable}`}>
         <AuthProvider>
-          <Header />
-          <Suspense fallback={null}>{children}</Suspense>
-          <CartSidebar />
-          <FloatingCartButton />
+          <FilterProvider>
+            <Header />
+            <main className="flex-1">
+              <Suspense fallback={null}>{children}</Suspense>
+            </main>
+            <CartSidebar />
+          </FilterProvider>
         </AuthProvider>
       </body>
     </html>

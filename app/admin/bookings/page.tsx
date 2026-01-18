@@ -5,8 +5,11 @@ import { collection, getDocs, query, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { CalendarIntegration } from "@/components/admin/calendar-integration"
-import { Calendar, Clock, User, Package } from "lucide-react"
+import { Calendar, Clock, User, Package, Search, Filter, CheckCircle2, XCircle, AlertCircle } from "lucide-react"
 import { format } from "date-fns"
 
 interface Booking {
@@ -73,6 +76,8 @@ const formatTime = (time: any): string => {
 export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
 
   useEffect(() => {
     fetchBookings()
@@ -101,14 +106,54 @@ export default function AdminBookingsPage() {
     setBookings((prev) => prev.map((booking) => (booking.id === updatedBooking.id ? updatedBooking : booking)))
   }
 
+  // Filter bookings
+  const filteredBookings = bookings.filter((booking) => {
+    const matchesSearch =
+      booking.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      booking.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      booking.customerEmail.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesStatus = statusFilter === "all" || booking.status === statusFilter
+    return matchesSearch && matchesStatus
+  })
+
+  // Calculate stats
+  const stats = {
+    total: bookings.length,
+    confirmed: bookings.filter((b) => b.status === "confirmed").length,
+    pending: bookings.filter((b) => b.status === "pending").length,
+    cancelled: bookings.filter((b) => b.status === "cancelled").length,
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "confirmed":
-        return <Badge className="bg-green-100 text-green-800">Confirmed</Badge>
+        return (
+          <Badge className="bg-green-100 text-green-800 border-green-200">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            Confirmed
+          </Badge>
+        )
       case "cancelled":
-        return <Badge variant="destructive">Cancelled</Badge>
+        return (
+          <Badge variant="destructive" className="border-red-200">
+            <XCircle className="h-3 w-3 mr-1" />
+            Cancelled
+          </Badge>
+        )
       case "completed":
-        return <Badge className="bg-blue-100 text-blue-800">Completed</Badge>
+        return (
+          <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            Completed
+          </Badge>
+        )
+      case "pending":
+        return (
+          <Badge variant="outline" className="border-orange-200 text-orange-700">
+            <AlertCircle className="h-3 w-3 mr-1" />
+            Pending
+          </Badge>
+        )
       default:
         return <Badge variant="outline">{status}</Badge>
     }
@@ -116,8 +161,8 @@ export default function AdminBookingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white">
-        <div className="container mx-auto px-4 py-12">
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 py-6 max-w-7xl">
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="text-center space-y-4">
               <div className="w-16 h-16 mx-auto border-4 border-[rgb(var(--mavi-blue))] border-t-transparent rounded-full animate-spin"></div>
@@ -130,84 +175,146 @@ export default function AdminBookingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Booking Management</h1>
-        <p className="text-muted-foreground">Manage rental bookings and calendar integration</p>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2.5 rounded-2xl bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 border border-[rgb(var(--mavi-blue))]/20">
+              <Calendar className="h-7 w-7 text-[rgb(var(--mavi-blue))]" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
+                Bookings
+              </h1>
+              <p className="text-sm text-muted-foreground mt-0.5">Manage rental bookings and calendar integration</p>
+            </div>
+          </div>
 
-      <div className="space-y-6">
-        {bookings.map((booking) => (
-          <Card key={booking.id}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  {booking.productName}
-                </CardTitle>
-                {getStatusBadge(booking.status)}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid lg:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Customer</label>
-                      <div className="flex items-center gap-2 mt-1">
-                        <User className="h-4 w-4" />
-                        <div>
-                          <div className="font-medium">{booking.customerName}</div>
-                          <div className="text-sm text-muted-foreground">{booking.customerEmail}</div>
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-md transition-all cursor-pointer">
+              <CardContent className="p-2.5 text-center">
+                <div className="text-xs text-muted-foreground">Total Bookings</div>
+                <div className="text-4xl font-bold text-[rgb(var(--mavi-blue))]">{stats.total}</div>
+              </CardContent>
+            </Card>
+            <Card className="border-2 hover:border-green-300 hover:shadow-md transition-all cursor-pointer">
+              <CardContent className="p-2.5 text-center">
+                <div className="text-xs text-muted-foreground">Confirmed</div>
+                <div className="text-4xl font-bold text-green-600">{stats.confirmed}</div>
+              </CardContent>
+            </Card>
+            <Card className="border-2 hover:border-orange-300 hover:shadow-md transition-all cursor-pointer">
+              <CardContent className="p-2.5 text-center">
+                <div className="text-xs text-muted-foreground">Pending</div>
+                <div className="text-4xl font-bold text-orange-600">{stats.pending}</div>
+              </CardContent>
+            </Card>
+            <Card className="border-2 hover:border-red-300 hover:shadow-md transition-all cursor-pointer">
+              <CardContent className="p-2.5 text-center">
+                <div className="text-xs text-muted-foreground">Cancelled</div>
+                <div className="text-4xl font-bold text-red-600">{stats.cancelled}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Search and Filter */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by product, customer, or email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-10 border-2"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-[180px] h-10 border-2">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Filter status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Bookings Table */}
+        <Card className="border-2">
+          <CardContent className="p-0">
+            {filteredBookings.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50/50">
+                    <TableHead className="font-semibold">Product</TableHead>
+                    <TableHead className="font-semibold">Customer</TableHead>
+                    <TableHead className="font-semibold">Date & Time</TableHead>
+                    <TableHead className="font-semibold">Price</TableHead>
+                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="font-semibold">Order ID</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredBookings.map((booking) => (
+                    <TableRow
+                      key={booking.id}
+                      className="hover:bg-[rgb(var(--mavi-blue))]/5 transition-colors cursor-pointer"
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <Package className="h-4 w-4 text-[rgb(var(--mavi-blue))]" />
+                          <span className="max-w-[200px] truncate">{booking.productName}</span>
                         </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Booking Time</label>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Calendar className="h-4 w-4" />
-                        <div>
-                          <div className="font-medium" suppressHydrationWarning>{safeFormat(booking.date, "MMM dd, yyyy")}</div>
-                          <div className="text-sm text-muted-foreground flex items-center gap-1" suppressHydrationWarning>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium truncate">{booking.customerName}</div>
+                            <div className="text-xs text-muted-foreground truncate">{booking.customerEmail}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-0.5">
+                          <div className="text-sm font-medium" suppressHydrationWarning>
+                            {safeFormat(booking.date, "MMM dd, yyyy")}
+                          </div>
+                          <div className="text-xs text-muted-foreground flex items-center gap-1" suppressHydrationWarning>
                             <Clock className="h-3 w-3" />
                             {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Price</label>
-                      <div className="font-medium mt-1">€{booking.price.toFixed(2)}</div>
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Order ID</label>
-                      <div className="font-mono text-sm mt-1">{booking.orderId}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <CalendarIntegration booking={booking} onBookingUpdate={handleBookingUpdate} />
+                      </TableCell>
+                      <TableCell className="font-bold text-[rgb(var(--mavi-blue))]">€{booking.price.toFixed(2)}</TableCell>
+                      <TableCell>{getStatusBadge(booking.status)}</TableCell>
+                      <TableCell>
+                        <code className="text-xs bg-gray-100 px-2 py-1 rounded">{booking.orderId.substring(0, 8)}</code>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-12">
+                <Calendar className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">No bookings found</h3>
+                <p className="text-sm text-muted-foreground">
+                  {searchQuery || statusFilter !== "all"
+                    ? "Try adjusting your filters"
+                    : "Bookings will appear here after customers make reservations."}
+                </p>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-
-        {bookings.length === 0 && (
-          <Card>
-            <CardContent className="text-center py-12">
-              <Calendar className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">No bookings found</h3>
-              <p className="text-muted-foreground">Bookings will appear here after customers make reservations.</p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

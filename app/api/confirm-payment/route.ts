@@ -3,6 +3,8 @@ import Stripe from "stripe"
 import * as admin from "firebase-admin"
 import { BillbeeAPI } from "@/lib/billbee"
 import { GoogleCalendarAPI } from "@/lib/google-calendar"
+import { db as clientDb } from "@/lib/firebase"
+import { doc, getDoc, deleteDoc } from "firebase/firestore"
 
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
@@ -30,8 +32,19 @@ export async function POST(request: NextRequest) {
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
 
     if (paymentIntent.status === "succeeded") {
-      // Parse order data from metadata
-      const orderItems = JSON.parse(paymentIntent.metadata.orderItems || "[]")
+      // Retrieve order data from Firebase temp_orders
+      const tempOrderId = paymentIntent.metadata.tempOrderId
+      if (!tempOrderId) {
+        throw new Error("No temp order ID found in payment intent metadata")
+      }
+
+      const tempOrderDoc = await getDoc(doc(clientDb, "temp_orders", tempOrderId))
+      if (!tempOrderDoc.exists()) {
+        throw new Error("Temp order not found")
+      }
+
+      const tempOrderData = tempOrderDoc.data()
+      const orderItems = tempOrderData.items || []
 
       // Create order in Firebase using Admin SDK
       const orderData = {
@@ -195,6 +208,14 @@ export async function POST(request: NextRequest) {
 
       // Billbee will handle order confirmation emails
       console.log("✅ Order completed. Billbee will send confirmations.")
+
+      // Clean up temp order from Firebase
+      try {
+        await deleteDoc(doc(clientDb, "temp_orders", tempOrderId))
+        console.log("🗑️ Temp order cleaned up")
+      } catch (cleanupError) {
+        console.error("⚠️ Failed to cleanup temp order:", cleanupError)
+      }
 
       return NextResponse.json({
         success: true,

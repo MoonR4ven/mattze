@@ -33,20 +33,20 @@ export function CartPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Shopping Cart</h1>
-          <p className="text-muted-foreground">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2">Shopping Cart</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             {getTotalItems()} {getTotalItems() === 1 ? "item" : "items"} in your cart
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-4">
+        <div className="grid lg:grid-cols-3 gap-6 sm:gap-8">
+          <div className="lg:col-span-2 space-y-3 sm:space-y-4">
             {items.map((item, index) => (
               <Card key={`${item.id}-${item.selectedDate}-${item.selectedTime}-${index}`}>
-                <CardContent className="p-6">
-                  <div className="flex gap-4">
-                  <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-muted">
+                <CardContent className="p-3 sm:p-6">
+                  <div className="flex gap-3 sm:gap-4">
+                  <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                     <Image
                       src={item.image || `/placeholder.svg?height=96&width=96&text=${encodeURIComponent(item.name)}`}
                       alt={item.name}
@@ -55,11 +55,11 @@ export function CartPage() {
                     />
                   </div>
 
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-semibold text-lg">{item.name}</h3>
-                        <Badge variant="secondary" className="text-xs">
+                  <div className="flex-1 space-y-1.5 sm:space-y-2 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-base sm:text-lg line-clamp-2">{item.name}</h3>
+                        <Badge variant="secondary" className="text-xs mt-1">
                           {item.type}
                         </Badge>
                       </div>
@@ -67,21 +67,21 @@ export function CartPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => removeFromCart(item.id)}
-                        className="text-destructive hover:text-destructive"
+                        className="text-destructive hover:text-destructive h-8 w-8 p-0 flex-shrink-0"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </Button>
                     </div>
 
                     {item.selectedDate && item.selectedTime && (
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          <span>{format(new Date(item.selectedDate), "MMM dd, yyyy")}</span>
+                          <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="text-xs sm:text-sm">{format(new Date(item.selectedDate), "MMM dd, yyyy")}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          <span>{item.selectedTime}</span>
+                          <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="text-xs sm:text-sm">{item.selectedTime}</span>
                         </div>
                       </div>
                     )}

@@ -8,8 +8,8 @@ interface CartStore {
   items: CartItem[]
   isOpen: boolean
   addToCart: (item: CartItem) => void
-  removeFromCart: (id: string) => void
-  updateQuantity: (id: string, quantity: number) => void
+  removeFromCart: (id: string, startDate?: string, endDate?: string, selectedDate?: string) => void
+  updateQuantity: (id: string, quantity: number, startDate?: string, endDate?: string, selectedDate?: string) => void
   clearCart: () => void
   getTotalPrice: () => number
   getTotalItems: () => number
@@ -54,20 +54,38 @@ export const useCart = create<CartStore>()(
         })
       },
 
-      removeFromCart: (id) => {
+      removeFromCart: (id, startDate, endDate, selectedDate) => {
         set((state) => ({
-          items: state.items.filter((item) => item.id !== id),
+          items: state.items.filter((item) => {
+            // Match by ID and booking dates to identify the specific item
+            const idMatch = item.id === id
+            const startDateMatch = startDate ? item.startDate === startDate : true
+            const endDateMatch = endDate ? item.endDate === endDate : true
+            const selectedDateMatch = selectedDate ? item.selectedDate === selectedDate : true
+            
+            // Remove only if all conditions match
+            return !(idMatch && startDateMatch && endDateMatch && selectedDateMatch)
+          }),
         }))
       },
 
-      updateQuantity: (id, quantity) => {
+      updateQuantity: (id, quantity, startDate, endDate, selectedDate) => {
         if (quantity <= 0) {
-          get().removeFromCart(id)
+          get().removeFromCart(id, startDate, endDate, selectedDate)
           return
         }
 
         set((state) => ({
-          items: state.items.map((item) => (item.id === id ? { ...item, quantity } : item)),
+          items: state.items.map((item) => {
+            const idMatch = item.id === id
+            const startDateMatch = startDate ? item.startDate === startDate : true
+            const endDateMatch = endDate ? item.endDate === endDate : true
+            const selectedDateMatch = selectedDate ? item.selectedDate === selectedDate : true
+            
+            return idMatch && startDateMatch && endDateMatch && selectedDateMatch
+              ? { ...item, quantity }
+              : item
+          }),
         }))
       },
 

@@ -38,7 +38,7 @@
   --chart-3: 8 97 91;
   --chart-4: 62 168 255;
   --chart-5: 0 90 145;
-  --radius: 0.75rem;
+  --radius: 1.5rem;
   --sidebar: 255 255 255;
   --sidebar-foreground: 21 21 21;
   --sidebar-primary: 30 144 255;
@@ -211,7 +211,15 @@
   }
 
   .hover-lift:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.15), 0 12px 20px -8px rgb(0 0 0 / 0.1);
+  }
+
+  .button-pop {
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .button-pop:active {
+    transform: scale(0.95);
   }
 }

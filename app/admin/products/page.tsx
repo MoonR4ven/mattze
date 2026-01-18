@@ -27,7 +27,7 @@ import {
 import { Plus, Edit, Trash2, Package, Euro, X, Sparkles, TrendingUp, Upload } from "lucide-react"
 import { toast } from "sonner"
 import Image from "next/image"
-import { uploadImageToImgBB } from "@/lib/imgbb"
+import { uploadToImgBB } from "@/lib/imgbb"
 
 const productTypes = ["Audio Equipment", "Decoration", "Furniture", "Entertainment", "Shelter", "Article"]
 
@@ -183,9 +183,13 @@ export default function AdminProductsPage() {
 
     setUploadingImage(true)
     try {
-      const imageUrl = await uploadImageToImgBB(file)
-      setFormData((prev) => ({ ...prev, image: imageUrl }))
-      toast.success("Image uploaded successfully")
+      const imageUrl = await uploadToImgBB(file)
+      if (imageUrl) {
+        setFormData((prev) => ({ ...prev, image: imageUrl }))
+        toast.success("Image uploaded successfully")
+      } else {
+        toast.error("Failed to upload image")
+      }
     } catch (error) {
       console.error("Error uploading image:", error)
       toast.error("Failed to upload image")
@@ -259,20 +263,20 @@ export default function AdminProductsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="container mx-auto px-4 py-12">
-        <div className="mb-12 space-y-8 animate-slide-up">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        <div className="mb-6 space-y-6 animate-slide-up">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="space-y-2">
               <div className="flex items-center gap-3">
-                <div className="p-3 rounded-2xl bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 border border-[rgb(var(--mavi-blue))]/20">
-                  <Package className="h-8 w-8 text-[rgb(var(--mavi-blue))]" />
+                <div className="p-2.5 rounded-2xl bg-gradient-to-br from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 border border-[rgb(var(--mavi-blue))]/20">
+                  <Package className="h-7 w-7 text-[rgb(var(--mavi-blue))]" />
                 </div>
                 <div>
-                  <h1 className="text-4xl font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
+                  <h1 className="text-3xl font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
                     Product Management
                   </h1>
-                  <p className="text-muted-foreground flex items-center gap-2 mt-1">
+                  <p className="text-sm text-muted-foreground flex items-center gap-2 mt-0.5">
                     <TrendingUp className="h-4 w-4" />
                     Manage your rental inventory
                   </p>
@@ -285,286 +289,344 @@ export default function AdminProductsPage() {
                 <Button
                   onClick={() => setIsDialogOpen(true)}
                   size="lg"
-                  className="bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all hover:scale-105 shadow-lg hover:shadow-xl"
+                  className="bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all hover:scale-105 shadow-lg hover:shadow-xl duration-200"
                 >
                   <Plus className="h-5 w-5 mr-2" />
                   Add Product
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto animate-scale-in bg-white">
-                <DialogHeader>
-                  <DialogTitle className="text-2xl flex items-center gap-2">
-                    <Sparkles className="h-6 w-6 text-[rgb(var(--mavi-blue))]" />
+              <DialogContent className="max-w-5xl h-[90vh] flex flex-col bg-white p-0">
+                <DialogHeader className="border-b px-6 py-4 shrink-0">
+                  <DialogTitle className="text-xl font-semibold flex items-center gap-2">
+                    <Package className="h-5 w-5 text-gray-700" />
                     {editingProduct ? "Edit Product" : "Add New Product"}
                   </DialogTitle>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-6 mt-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="name" className="text-sm font-semibold">
-                        Product Name
-                      </Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => handleInputChange("name", e.target.value)}
-                        placeholder="e.g., Partyzelt 5x5m"
-                        required
-                        className="h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="type" className="text-sm font-semibold">
-                        Category
-                      </Label>
-                      <Select value={formData.type} onValueChange={(value) => handleInputChange("type", value)}>
-                        <SelectTrigger className="h-12">
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {productTypes.map((type) => (
-                            <SelectItem key={type} value={type}>
-                              {type}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="description" className="text-sm font-semibold">
-                      Description
-                    </Label>
-                    <Textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => handleInputChange("description", e.target.value)}
-                      placeholder="Enter detailed product description"
-                      rows={4}
-                      required
-                      className="transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="price" className="text-sm font-semibold">
-                        Daily Price (€)
-                      </Label>
-                      <Input
-                        id="price"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={formData.price}
-                        onChange={(e) => handleInputChange("price", Number.parseFloat(e.target.value) || 0)}
-                        placeholder="0.00"
-                        required
-                        className="h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="dimensions" className="text-sm font-semibold">
-                        Dimensions
-                      </Label>
-                      <Input
-                        id="dimensions"
-                        value={formData.dimensions}
-                        onChange={(e) => handleInputChange("dimensions", e.target.value)}
-                        placeholder="e.g., 5x5m"
-                        className="h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="capacity" className="text-sm font-semibold">
-                        Capacity
-                      </Label>
-                      <Input
-                        id="capacity"
-                        value={formData.capacity}
-                        onChange={(e) => handleInputChange("capacity", e.target.value)}
-                        placeholder="e.g., 50 persons"
-                        className="h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="image" className="text-sm font-semibold">
-                        Product Image
-                      </Label>
-                      <div className="space-y-3">
-                        <div className="flex gap-2">
+                <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+                  <div className="overflow-y-auto flex-1 px-6 py-4">
+                    <div className="space-y-6">
+                    {/* Basic Information Section */}
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold flex items-center gap-2 text-gray-700 uppercase tracking-wide">
+                        <Package className="h-4 w-4" />
+                        Basic Information
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="name" className="text-sm font-medium">
+                            Product Name *
+                          </Label>
                           <Input
-                            id="image"
-                            value={formData.image}
-                            onChange={(e) => handleInputChange("image", e.target.value)}
-                            placeholder="Image URL"
-                            className="h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
+                            id="name"
+                            value={formData.name}
+                            onChange={(e) => handleInputChange("name", e.target.value)}
+                            placeholder="e.g., Premium Party Tent 5x5m"
+                            required
+                            className="h-11"
                           />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => document.getElementById("image-upload")?.click()}
-                            disabled={uploadingImage}
-                            className="h-12 px-4 hover:bg-[rgb(var(--mavi-blue))]/10"
-                          >
-                            <Upload className="h-4 w-4" />
-                          </Button>
                         </div>
-                        <input
-                          id="image-upload"
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="hidden"
-                        />
-                        {uploadingImage && (
-                          <p className="text-sm text-muted-foreground">Uploading image...</p>
-                        )}
-                        {formData.image && (
-                          <div className="relative w-full h-32 rounded-lg overflow-hidden border">
-                            <Image
-                              src={formData.image}
-                              alt="Preview"
-                              fill
-                              className="object-cover"
-                            />
-                          </div>
-                        )}
+
+                        <div className="space-y-2">
+                          <Label htmlFor="type" className="text-sm font-medium">
+                            Category *
+                          </Label>
+                          <Select value={formData.type} onValueChange={(value) => handleInputChange("type", value)}>
+                            <SelectTrigger className="h-11">
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {productTypes.map((type) => (
+                                <SelectItem key={type} value={type}>
+                                  {type}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="md:col-span-2 space-y-2">
+                          <Label htmlFor="description" className="text-sm font-medium">
+                            Description *
+                          </Label>
+                          <Textarea
+                            id="description"
+                            value={formData.description}
+                            onChange={(e) => handleInputChange("description", e.target.value)}
+                            placeholder="Enter detailed product description..."
+                            rows={3}
+                            required
+                            className="resize-none"
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="available" className="text-sm font-semibold">
-                        Availability
-                      </Label>
-                      <Select
-                        value={formData.available.toString()}
-                        onValueChange={(value) => handleInputChange("available", value === "true")}
-                      >
-                        <SelectTrigger className="h-12">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="true">Available</SelectItem>
-                          <SelectItem value="false">Unavailable</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+                    {/* Pricing & Details Section */}
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold flex items-center gap-2 text-gray-700 uppercase tracking-wide">
+                        <Euro className="h-4 w-4" />
+                        Pricing & Details
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="price" className="text-sm font-medium">
+                            Daily Price (€) *
+                          </Label>
+                          <Input
+                            id="price"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={formData.price}
+                            onChange={(e) => handleInputChange("price", Number.parseFloat(e.target.value) || 0)}
+                            placeholder="0.00"
+                            required
+                            className="h-11"
+                          />
+                        </div>
 
-                  <div className="space-y-4 p-6 rounded-2xl bg-gray-50 border border-gray-200">
-                    <Label className="text-sm font-semibold flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-[rgb(var(--mavi-turquoise))]" />
-                      Specifications
-                    </Label>
-                    <div className="space-y-2">
-                      {Object.entries(formData.specifications).map(([key, value]) => (
-                        <div
-                          key={key}
-                          className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 hover:border-[rgb(var(--mavi-blue))]/30 transition-all"
-                        >
-                          <span className="font-medium text-sm flex-1">{key}:</span>
-                          <span className="text-sm flex-1 text-muted-foreground">{value}</span>
+                        <div className="space-y-2">
+                          <Label htmlFor="dimensions" className="text-sm font-medium">
+                            Dimensions
+                          </Label>
+                          <Input
+                            id="dimensions"
+                            value={formData.dimensions}
+                            onChange={(e) => handleInputChange("dimensions", e.target.value)}
+                            placeholder="e.g., 5x5m"
+                            className="h-11"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="capacity" className="text-sm font-medium">
+                            Capacity
+                          </Label>
+                          <Input
+                            id="capacity"
+                            value={formData.capacity}
+                            onChange={(e) => handleInputChange("capacity", e.target.value)}
+                            placeholder="e.g., 50 persons"
+                            className="h-11"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Image & Availability Section */}
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold flex items-center gap-2 text-gray-700 uppercase tracking-wide">
+                        <Upload className="h-4 w-4" />
+                        Image & Availability
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium">Product Image</Label>
+                          <div className="space-y-3">
+                            <div className="flex gap-2">
+                              <Input
+                                id="image"
+                                value={formData.image}
+                                onChange={(e) => handleInputChange("image", e.target.value)}
+                                placeholder="Or paste image URL"
+                                className="h-11"
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => document.getElementById("image-upload")?.click()}
+                                disabled={uploadingImage}
+                                className="h-11 px-6 hover:bg-gray-50"
+                              >
+                                {uploadingImage ? (
+                                  <div className="h-4 w-4 border-2 border-[rgb(var(--mavi-blue))] border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <Upload className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                            <input
+                              id="image-upload"
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageUpload}
+                              className="hidden"
+                            />
+                            {formData.image && (
+                              <div className="relative w-full aspect-video rounded-xl overflow-hidden border-2 border-gray-200 bg-gray-50">
+                                <Image
+                                  src={formData.image}
+                                  alt="Preview"
+                                  fill
+                                  className="object-contain"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="available" className="text-sm font-medium">
+                            Availability Status
+                          </Label>
+                          <Select
+                            value={formData.available.toString()}
+                            onValueChange={(value) => handleInputChange("available", value === "true")}
+                          >
+                            <SelectTrigger className="h-11">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="true">Available</SelectItem>
+                              <SelectItem value="false">Unavailable</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Control whether this product can be rented by customers
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Specifications Section */}
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold flex items-center gap-2 text-gray-700 uppercase tracking-wide">
+                        <Sparkles className="h-4 w-4" />
+                        Specifications
+                      </h3>
+                      <div className="p-3 rounded-lg bg-gray-50 border space-y-3">
+                        {Object.entries(formData.specifications).length > 0 ? (
+                          <div className="grid gap-2">
+                            {Object.entries(formData.specifications).map(([key, value]) => (
+                              <div
+                                key={key}
+                                className="flex items-center gap-3 p-2.5 bg-white rounded-lg border hover:border-gray-300 transition-all group"
+                              >
+                                <div className="flex-1 grid grid-cols-2 gap-2">
+                                  <span className="font-medium text-sm">{key}</span>
+                                  <span className="text-sm text-muted-foreground">{value}</span>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeSpecification(key)}
+                                  className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground text-center py-2">
+                            No specifications added yet
+                          </p>
+                        )}
+                        <div className="grid grid-cols-[1fr_1fr_auto] gap-2 pt-2">
+                          <Input
+                            placeholder="Key (e.g., Material)"
+                            value={newSpecKey}
+                            onChange={(e) => setNewSpecKey(e.target.value)}
+                            onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSpecification())}
+                            className="h-10"
+                          />
+                          <Input
+                            placeholder="Value (e.g., PVC 750N)"
+                            value={newSpecValue}
+                            onChange={(e) => setNewSpecValue(e.target.value)}
+                            onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSpecification())}
+                            className="h-10"
+                          />
                           <Button
                             type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeSpecification(key)}
-                            className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+                            onClick={addSpecification}
+                            className="h-10 bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 text-white"
                           >
-                            <X className="h-4 w-4" />
+                            Add
                           </Button>
                         </div>
-                      ))}
+                      </div>
                     </div>
-                    <div className="flex gap-3">
-                      <Input
-                        placeholder="Key (e.g., Material)"
-                        value={newSpecKey}
-                        onChange={(e) => setNewSpecKey(e.target.value)}
-                        onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSpecification())}
-                        className="flex-1"
-                      />
-                      <Input
-                        placeholder="Value (e.g., PVC-Plane 750 N)"
-                        value={newSpecValue}
-                        onChange={(e) => setNewSpecValue(e.target.value)}
-                        onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addSpecification())}
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={addSpecification}
-                        className="hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] hover:border-[rgb(var(--mavi-blue))]"
-                      >
-                        Add
-                      </Button>
-                    </div>
-                  </div>
 
-                  <div className="space-y-4 p-6 rounded-2xl bg-gray-50 border border-gray-200">
-                    <Label className="text-sm font-semibold flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-[rgb(var(--mavi-turquoise))]" />
-                      Features
-                    </Label>
-                    <div className="space-y-2">
-                      {formData.features.map((feature, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 hover:border-[rgb(var(--mavi-blue))]/30 transition-all"
-                        >
-                          <span className="text-sm flex-1">{feature}</span>
+                    {/* Features Section */}
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold flex items-center gap-2 text-gray-700 uppercase tracking-wide">
+                        <TrendingUp className="h-4 w-4" />
+                        Features
+                      </h3>
+                      <div className="p-3 rounded-lg bg-gray-50 border space-y-3">
+                        {formData.features.length > 0 ? (
+                          <div className="grid gap-2">
+                            {formData.features.map((feature, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center gap-3 p-2.5 bg-white rounded-lg border hover:border-gray-300 transition-all group"
+                              >
+                                <span className="text-sm flex-1">{feature}</span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeFeature(index)}
+                                  className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground text-center py-2">
+                            No features added yet
+                          </p>
+                        )}
+                        <div className="flex gap-2 pt-2">
+                          <Input
+                            placeholder="Add a feature (e.g., UV Protection 50+)"
+                            value={newFeature}
+                            onChange={(e) => setNewFeature(e.target.value)}
+                            onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addFeature())}
+                            className="h-10 flex-1"
+                          />
                           <Button
                             type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeFeature(index)}
-                            className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+                            onClick={addFeature}
+                            className="h-10 bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 text-white"
                           >
-                            <X className="h-4 w-4" />
+                            Add
                           </Button>
                         </div>
-                      ))}
+                      </div>
                     </div>
-                    <div className="flex gap-3">
-                      <Input
-                        placeholder="Add a feature (e.g., UV-Schutz: 50 nach EN 13758-1)"
-                        value={newFeature}
-                        onChange={(e) => setNewFeature(e.target.value)}
-                        onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addFeature())}
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={addFeature}
-                        className="hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] hover:border-[rgb(var(--mavi-blue))]"
-                      >
-                        Add
-                      </Button>
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-3 pt-6 border-t">
-                    <Button type="button" variant="outline" onClick={handleCloseDialog} size="lg">
+                  {/* Action Buttons - Always Visible */}
+                  <div className="shrink-0 bg-white border-t px-6 py-4 flex justify-end gap-3">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={handleCloseDialog} 
+                      className="h-11 px-6"
+                      disabled={isSubmitting}
+                    >
                       Cancel
                     </Button>
                     <Button
                       type="submit"
                       disabled={isSubmitting}
-                      size="lg"
-                      className="bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 transition-all"
+                      className="h-11 px-8 bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 text-white"
                     >
-                      {isSubmitting ? "Saving..." : editingProduct ? "Update Product" : "Add Product"}
+                      {isSubmitting ? (
+                        <div className="flex items-center gap-2">
+                          <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Saving...
+                        </div>
+                      ) : (
+                        editingProduct ? "Update Product" : "Create Product"
+                      )}
                     </Button>
                   </div>
                 </form>
@@ -577,16 +639,16 @@ export default function AdminProductsPage() {
               placeholder="Search products..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-12 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20"
+              className="h-11 transition-all focus:ring-2 focus:ring-[rgb(var(--mavi-blue))]/20 border-2"
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredProducts.map((product, index) => (
             <Card
               key={product.id}
-              className="group hover-lift overflow-hidden border-2 border-transparent hover:border-[rgb(var(--mavi-blue))]/20 transition-all animate-fade-in"
+              className="group overflow-hidden border-2 hover:border-[rgb(var(--mavi-blue))]/30 hover:shadow-lg transition-all duration-200 hover:scale-[1.02] animate-fade-in"
               style={{ animationDelay: `${index * 50}ms` }}
             >
               <CardHeader className="p-0">
@@ -611,12 +673,12 @@ export default function AdminProductsPage() {
                 </div>
               </CardHeader>
 
-              <CardContent className="p-6 space-y-4">
+              <CardContent className="p-5 space-y-3">
                 <div>
-                  <h3 className="font-bold text-xl mb-2 line-clamp-1 group-hover:text-[rgb(var(--mavi-blue))] transition-colors">
+                  <h3 className="font-bold text-lg mb-1.5 line-clamp-1 group-hover:text-[rgb(var(--mavi-blue))] transition-colors">
                     {product.name}
                   </h3>
-                  <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{product.description}</p>
                 </div>
 
                 {(product.dimensions || product.capacity) && (
@@ -634,30 +696,30 @@ export default function AdminProductsPage() {
                   </div>
                 )}
 
-                <div className="flex items-center justify-between pt-2">
-                  <div className="flex items-center gap-2">
-                    <Euro className="h-5 w-5 text-[rgb(var(--mavi-blue))]" />
-                    <span className="font-bold text-2xl bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
+                <div className="flex items-center justify-between pt-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <Euro className="h-4 w-4 text-[rgb(var(--mavi-blue))]" />
+                    <span className="font-bold text-xl bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
                       {product.price.toFixed(2)}
                     </span>
-                    <span className="text-sm text-muted-foreground">/day</span>
+                    <span className="text-xs text-muted-foreground">/day</span>
                   </div>
                   <Badge
                     variant="secondary"
-                    className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 border-[rgb(var(--mavi-blue))]/20"
+                    className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 border-[rgb(var(--mavi-blue))]/20 text-xs"
                   >
                     {product.type}
                   </Badge>
                 </div>
 
-                <div className="flex gap-3 pt-4">
+                <div className="flex gap-2.5 pt-3">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] hover:border-[rgb(var(--mavi-blue))] transition-all"
+                    className="flex-1 hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] hover:border-[rgb(var(--mavi-blue))] transition-all hover:scale-105 duration-200"
                     onClick={() => handleEdit(product)}
                   >
-                    <Edit className="h-4 w-4 mr-2" />
+                    <Edit className="h-4 w-4 mr-1.5" />
                     Edit
                   </Button>
 
@@ -666,7 +728,7 @@ export default function AdminProductsPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive transition-all"
+                        className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive transition-all hover:scale-105 duration-200"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

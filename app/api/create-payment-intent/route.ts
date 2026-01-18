@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"
+import { db } from "@/lib/firebase"
+import { addDoc, collection } from "firebase/firestore"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_dummy_key_for_build", {
   apiVersion: "2024-06-20",
@@ -11,6 +13,16 @@ export async function POST(request: NextRequest) {
     const { amount, currency = "eur", customerInfo, items } = body
 
     console.log("💰 Creating payment intent for amount:", amount, "cents (", amount / 100, "euros )")
+
+    // Store order items in Firebase to avoid Stripe metadata size limits
+    const tempOrderRef = await addDoc(collection(db, "temp_orders"), {
+      items,
+      customerInfo,
+      amount,
+      currency,
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
+    })
 
     // Create payment intent (amount is already in cents from frontend)
     const paymentIntent = await stripe.paymentIntents.create({
@@ -25,17 +37,7 @@ export async function POST(request: NextRequest) {
         customerPostalCode: customerInfo.postalCode || "",
         customerCountry: customerInfo.country || "NL",
         itemCount: items.length.toString(),
-        orderItems: JSON.stringify(
-          items.map((item: any) => ({
-            id: item.id,
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            numberOfDays: item.numberOfDays || 1,
-            selectedDate: item.selectedDate,
-            selectedTime: item.selectedTime,
-          })),
-        ),
+        tempOrderId: tempOrderRef.id, // Reference to Firebase temp order
       },
       receipt_email: customerInfo.email,
     })
