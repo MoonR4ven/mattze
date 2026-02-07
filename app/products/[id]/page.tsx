@@ -12,6 +12,7 @@ import { Calendar, Euro, Package, CheckCircle2, Info, ArrowLeft, Sparkles, Chevr
 import Image from "next/image"
 import Link from "next/link"
 import { useCart } from "@/hooks/use-cart"
+import { getPricePerDay } from "@/lib/pricing"
 import { useI18n } from "@/contexts/i18n-context"
 import { TimeBookingDialog } from "@/components/time-booking-dialog"
 
@@ -52,10 +53,15 @@ export default function ProductDetailPage() {
   const handleAddToCart = (startDate?: string, endDate?: string, days?: number) => {
     if (!product) return
 
-    const totalPrice = days ? product.price * days : product.price
+    const safeDays = days || 1
+    const pricePerDay = getPricePerDay(product, safeDays)
+    const totalPrice = pricePerDay * safeDays
 
     addToCart({
       ...product,
+      price: pricePerDay,
+      pricePerDay,
+      taxRate: product.taxRate,
       quantity: 1,
       startDate,
       endDate,

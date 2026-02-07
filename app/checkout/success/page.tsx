@@ -22,9 +22,9 @@ export default function CheckoutSuccessPage() {
   
   // Calculate totals if we have order data
   const subtotal = orderData.items?.reduce((sum: number, item: any) => sum + (item.totalPrice || 0), 0) || 0
-  const taxRate = 0.21
-  const tax = subtotal * taxRate
-  const total = subtotal + tax
+  const tax = orderData.pricing?.tax ?? 0
+  const deliveryFee = orderData.deliveryFee ?? 0
+  const total = subtotal + tax + deliveryFee
 
   // Generate calendar links for items
   const generateCalendarLinks = (item: any) => {

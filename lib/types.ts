@@ -1,9 +1,16 @@
+export interface PricingTier {
+  minDays: number
+  pricePerDay: number
+}
+
 export interface Product {
   id: string
   name: string
   description: string
   type: string
   price: number
+  taxRate?: number
+  pricingTiers?: PricingTier[]
   image?: string
   images?: string[]
   available?: boolean
@@ -28,6 +35,7 @@ export interface BookingSlot {
 
 export interface CartItem extends Product {
   quantity: number
+  pricePerDay?: number
   selectedDate?: string
   selectedTime?: string
   // New fields for daily booking
@@ -35,6 +43,7 @@ export interface CartItem extends Product {
   endDate?: string
   numberOfDays?: number
   totalPrice?: number
+  taxRate?: number
 }
 
 export interface Order {

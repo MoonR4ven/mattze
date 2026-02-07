@@ -10,7 +10,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_dummy_key_fo
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { amount, currency = "eur", customerInfo, items, locale = "en" } = body
+    const { amount, currency = "eur", customerInfo, items, locale = "en", deliveryInfo, pricing } = body
 
     console.log("💰 Creating payment intent for amount:", amount, "cents (", amount / 100, "euros )")
 
@@ -18,6 +18,8 @@ export async function POST(request: NextRequest) {
     const tempOrderRef = await addDoc(collection(db, "temp_orders"), {
       items,
       customerInfo,
+      deliveryInfo: deliveryInfo || null,
+      pricing: pricing || null,
       amount,
       currency,
       createdAt: new Date().toISOString(),
@@ -42,6 +44,9 @@ export async function POST(request: NextRequest) {
         itemCount: items.length.toString(),
         tempOrderId: tempOrderRef.id, // Reference to Firebase temp order
         locale: locale,
+        fulfillmentOption: deliveryInfo?.fulfillmentOption || "",
+        deliveryDistanceKm: deliveryInfo?.distanceKm != null ? String(deliveryInfo.distanceKm) : "",
+        deliveryFee: deliveryInfo?.fee != null ? String(deliveryInfo.fee) : "",
       },
       receipt_email: customerInfo.email,
     })

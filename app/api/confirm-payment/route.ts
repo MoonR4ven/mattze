@@ -57,6 +57,8 @@ export async function POST(request: NextRequest) {
 
       const tempOrderData = tempOrderDoc.data()
       const orderItems = tempOrderData.items || []
+      const deliveryInfo = tempOrderData.deliveryInfo || null
+      const pricing = tempOrderData.pricing || null
 
       // Create order in Firebase using Admin SDK
       const orderData = {
@@ -72,10 +74,13 @@ export async function POST(request: NextRequest) {
           country: paymentIntent.metadata.customerCountry || "NL",
         },
         items: orderItems,
+        deliveryInfo,
+        pricing,
         totalAmount: paymentIntent.amount / 100, // Convert from cents
         currency: paymentIntent.currency,
         status: "confirmed",
         paymentStatus: "paid",
+        paymentDate: new Date().toISOString(),
         createdAt: new Date().toISOString(),
         billbeeOrderId: null,
         billbeeInvoiceId: null,
@@ -114,7 +119,7 @@ export async function POST(request: NextRequest) {
             customerEmail: paymentIntent.metadata.customerEmail,
             customerName: paymentIntent.metadata.customerName,
             status: "confirmed",
-            price: item.price * item.quantity,
+            price: item.totalPrice ?? item.price * item.quantity * ((item.numberOfDays as number) || 1),
             createdAt: new Date().toISOString(),
             calendarEventId: null,
             calendarStatus: "pending",
@@ -214,6 +219,9 @@ export async function POST(request: NextRequest) {
           currency: orderData.currency,
           locale: paymentIntent.metadata.locale || "en",
           paymentMethod: paymentMethodName,
+          deliveryInfo: deliveryInfo || undefined,
+          vatRate: pricing?.vatRate,
+          paymentDate: orderData.paymentDate,
         })
 
         if (billbeeResult.success && billbeeResult.billbeeOrderId) {

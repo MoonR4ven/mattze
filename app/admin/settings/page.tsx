@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Plus, Edit, Trash2, Settings as SettingsIcon, Percent } from "lucide-react"
+import { Plus, Edit, Trash2, Settings as SettingsIcon, Percent, Truck, MapPin } from "lucide-react"
 import { toast } from "sonner"
 
 export default function AdminSettingsPage() {
@@ -38,6 +38,15 @@ export default function AdminSettingsPage() {
   const [formData, setFormData] = useState({ name: "", color: "#3B82F6" })
   const [categoryProductCounts, setCategoryProductCounts] = useState<Record<string, number>>({})
   const [vatRate, setVatRate] = useState<number>(21)
+  const [deliveryOriginAddress, setDeliveryOriginAddress] = useState("")
+  const [deliveryBaseRadiusKm, setDeliveryBaseRadiusKm] = useState<number>(10)
+  const [deliveryBaseFee, setDeliveryBaseFee] = useState<number>(20)
+  const [deliveryPerKmFee, setDeliveryPerKmFee] = useState<number>(1)
+  const [assemblyFee, setAssemblyFee] = useState<number>(0)
+  const [pickupLocations, setPickupLocations] = useState<AppSettings["pickupLocations"]>([])
+  const [pickupSelectionLimit, setPickupSelectionLimit] = useState<number>(2)
+  const [newPickupName, setNewPickupName] = useState("")
+  const [newPickupAddress, setNewPickupAddress] = useState("")
   const { t } = useI18n()
 
   useEffect(() => {
@@ -51,6 +60,13 @@ export default function AdminSettingsPage() {
       setCategories(categoriesData)
       setSettings(settingsData)
       setVatRate(settingsData.vatRate)
+      setDeliveryOriginAddress(settingsData.deliveryOriginAddress || "")
+      setDeliveryBaseRadiusKm(settingsData.deliveryBaseRadiusKm ?? 10)
+      setDeliveryBaseFee(settingsData.deliveryBaseFee ?? 20)
+      setDeliveryPerKmFee(settingsData.deliveryPerKmFee ?? 1)
+      setAssemblyFee(settingsData.assemblyFee ?? 0)
+      setPickupLocations(settingsData.pickupLocations || [])
+      setPickupSelectionLimit(settingsData.pickupSelectionLimit ?? 2)
 
       setCategories(categoriesData)
       setSettings(settingsData)
@@ -86,6 +102,67 @@ export default function AdminSettingsPage() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleSaveDeliverySettings = async () => {
+    try {
+      setIsSubmitting(true)
+      const success = await updateSettings({
+        deliveryOriginAddress,
+        deliveryBaseRadiusKm,
+        deliveryBaseFee,
+        deliveryPerKmFee,
+        assemblyFee,
+      })
+      if (success) {
+        toast.success(t("admin.settingsSaved"))
+        await fetchData()
+      } else {
+        toast.error(t("admin.settingsFailed"))
+      }
+    } catch (error) {
+      console.error("Error saving delivery settings:", error)
+      toast.error(t("admin.settingsFailed"))
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleSavePickupSettings = async () => {
+    try {
+      setIsSubmitting(true)
+      const success = await updateSettings({
+        pickupLocations,
+        pickupSelectionLimit,
+      })
+      if (success) {
+        toast.success(t("admin.settingsSaved"))
+        await fetchData()
+      } else {
+        toast.error(t("admin.settingsFailed"))
+      }
+    } catch (error) {
+      console.error("Error saving pickup settings:", error)
+      toast.error(t("admin.settingsFailed"))
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const addPickupLocation = () => {
+    if (!newPickupName.trim() || !newPickupAddress.trim()) return
+    const newLocation = {
+      id: `${Date.now()}`,
+      name: newPickupName.trim(),
+      address: newPickupAddress.trim(),
+    }
+    setPickupLocations((prev) => [...prev, newLocation])
+    setNewPickupName("")
+    setNewPickupAddress("")
+  }
+
+  const removePickupLocation = (id: string) => {
+    setPickupLocations((prev) => prev.filter((loc) => loc.id !== id))
   }
 
   const handleOpenDialog = (category?: Category) => {
@@ -216,6 +293,177 @@ export default function AdminSettingsPage() {
                 </p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Delivery Settings Section */}
+        <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 transition-all bg-slate-100">
+          <CardHeader className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/5 to-[rgb(var(--mavi-turquoise))]/5 border-b-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Truck className="h-5 w-5 text-[rgb(var(--mavi-blue))]" />
+                  {t("admin.deliverySettings")}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">{t("admin.deliverySettingsDescription")}</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="deliveryOrigin" className="text-sm font-medium">
+                {t("admin.deliveryOrigin")}
+              </Label>
+              <Input
+                id="deliveryOrigin"
+                value={deliveryOriginAddress}
+                onChange={(e) => setDeliveryOriginAddress(e.target.value)}
+                placeholder={t("admin.deliveryOriginPlaceholder")}
+                className="h-11 border-2"
+              />
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="deliveryRadius" className="text-sm font-medium">{t("admin.deliveryBaseRadius")}</Label>
+                <Input
+                  id="deliveryRadius"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={deliveryBaseRadiusKm}
+                  onChange={(e) => setDeliveryBaseRadiusKm(parseFloat(e.target.value) || 0)}
+                  className="h-11 border-2"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="deliveryBaseFee" className="text-sm font-medium">{t("admin.deliveryBaseFee")}</Label>
+                <Input
+                  id="deliveryBaseFee"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={deliveryBaseFee}
+                  onChange={(e) => setDeliveryBaseFee(parseFloat(e.target.value) || 0)}
+                  className="h-11 border-2"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="deliveryPerKm" className="text-sm font-medium">{t("admin.deliveryPerKmFee")}</Label>
+                <Input
+                  id="deliveryPerKm"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={deliveryPerKmFee}
+                  onChange={(e) => setDeliveryPerKmFee(parseFloat(e.target.value) || 0)}
+                  className="h-11 border-2"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="assemblyFee" className="text-sm font-medium">{t("admin.assemblyFee")}</Label>
+                <Input
+                  id="assemblyFee"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={assemblyFee}
+                  onChange={(e) => setAssemblyFee(parseFloat(e.target.value) || 0)}
+                  className="h-11 border-2"
+                />
+              </div>
+            </div>
+            <Button
+              onClick={handleSaveDeliverySettings}
+              disabled={isSubmitting}
+              className="bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 text-[rgb(var(--mavi-dark-teal))] font-semibold hover:text-black"
+            >
+              {isSubmitting ? t("admin.saving") : t("admin.save")}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Pickup Locations Section */}
+        <Card className="border-2 hover:border-[rgb(var(--mavi-blue))]/30 transition-all bg-slate-100">
+          <CardHeader className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/5 to-[rgb(var(--mavi-turquoise))]/5 border-b-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <MapPin className="h-5 w-5 text-[rgb(var(--mavi-blue))]" />
+                  {t("admin.pickupLocations")}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">{t("admin.pickupLocationsDescription")}</p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="pickupLimit" className="text-sm font-medium">{t("admin.pickupLimit")}</Label>
+              <Input
+                id="pickupLimit"
+                type="number"
+                min="1"
+                max="5"
+                value={pickupSelectionLimit}
+                onChange={(e) => setPickupSelectionLimit(parseInt(e.target.value, 10) || 1)}
+                className="h-11 border-2"
+              />
+            </div>
+
+            <div className="space-y-3">
+              {pickupLocations.length > 0 ? (
+                <div className="grid gap-2">
+                  {pickupLocations.map((location) => (
+                    <div key={location.id} className="flex items-start justify-between gap-3 p-3 rounded-lg border bg-[#d9d9d9]">
+                      <div>
+                        <div className="font-semibold text-sm">{location.name}</div>
+                        <div className="text-xs text-muted-foreground">{location.address}</div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removePickupLocation(location.id)}
+                        className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground text-center">{t("admin.noPickupLocations")}</p>
+              )}
+
+              <div className="grid md:grid-cols-[1fr_1fr_auto] gap-2">
+                <Input
+                  value={newPickupName}
+                  onChange={(e) => setNewPickupName(e.target.value)}
+                  placeholder={t("admin.pickupNamePlaceholder")}
+                  className="h-10"
+                />
+                <Input
+                  value={newPickupAddress}
+                  onChange={(e) => setNewPickupAddress(e.target.value)}
+                  placeholder={t("admin.pickupAddressPlaceholder")}
+                  className="h-10"
+                />
+                <Button
+                  type="button"
+                  onClick={addPickupLocation}
+                  className="h-10 bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 text-white hover:text-black"
+                >
+                  {t("admin.add")}
+                </Button>
+              </div>
+            </div>
+
+            <Button
+              onClick={handleSavePickupSettings}
+              disabled={isSubmitting}
+              className="bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 text-[rgb(var(--mavi-dark-teal))] font-semibold hover:text-black"
+            >
+              {isSubmitting ? t("admin.saving") : t("admin.save")}
+            </Button>
           </CardContent>
         </Card>
 

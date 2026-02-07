@@ -5,14 +5,23 @@ import { useI18n } from "@/contexts/i18n-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
+import { useEffect, useState } from "react"
+import { getSettings, type AppSettings } from "@/lib/settings"
+import { calculateSubtotal, calculateTaxTotal } from "@/lib/cart-pricing"
 
 export function CheckoutSummary() {
-  const { getTotalPrice, getTotalItems } = useCart()
+  const { items, getTotalItems, fulfillmentOption, deliveryFee } = useCart()
   const { t } = useI18n()
+  const [settings, setSettings] = useState<AppSettings | null>(null)
 
-  const subtotal = getTotalPrice()
-  const tax = subtotal * 0.21 // 21% VAT
-  const delivery = 0 // Free delivery
+  useEffect(() => {
+    getSettings().then(setSettings).catch(() => setSettings(null))
+  }, [])
+
+  const subtotal = calculateSubtotal(items)
+  const vatRate = settings?.vatRate ?? 21
+  const tax = calculateTaxTotal(items, vatRate)
+  const delivery = deliveryFee ?? 0
   const total = subtotal + tax + delivery
 
   return (
@@ -30,10 +39,12 @@ export function CheckoutSummary() {
           <div className="flex justify-between text-sm">
             <span>{t("checkout.delivery")}</span>
             <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="text-xs">
-                {t("checkout.free")}
-              </Badge>
-              <span>€{delivery.toFixed(2)}</span>
+              {fulfillmentOption === "self-collection" ? (
+                <Badge variant="secondary" className="text-xs">
+                  {t("checkout.free")}
+                </Badge>
+              ) : null}
+              <span>{fulfillmentOption === "self-collection" ? `€${delivery.toFixed(2)}` : (deliveryFee != null ? `€${delivery.toFixed(2)}` : t("checkout.deliveryCalculated"))}</span>
             </div>
           </div>
 
@@ -51,7 +62,7 @@ export function CheckoutSummary() {
         </div>
 
         <div className="text-xs text-muted-foreground">
-          <p>• {t("checkout.freeDelivery")}</p>
+          <p>• {t("checkout.deliveryNote")}</p>
           <p>• {t("checkout.setupService")}</p>
           <p>• {t("checkout.support")}</p>
         </div>

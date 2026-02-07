@@ -220,15 +220,25 @@ export class BillbeeAPI {
       startTime?: string
       endTime?: string
       numberOfDays?: number
+      taxRate?: number
+      totalPrice?: number
     }>
     totalAmount: number
     currency: string
     locale?: string
     paymentMethod?: string
+    deliveryInfo?: {
+      fulfillmentOption?: string
+      distanceKm?: number
+      fee?: number
+      pickupLocations?: Array<{ id: string; name: string; address: string }>
+    }
+    vatRate?: number
+    paymentDate?: string
   }): Promise<{ success: boolean; billbeeOrderId?: string; error?: string }> {
     try {
-      const taxRate = 0.21 // 21% VAT
-      const totalNet = orderData.totalAmount / (1 + taxRate)
+      const defaultVatRate = (orderData.vatRate ?? 21) / 100
+      const totalNet = orderData.totalAmount / (1 + defaultVatRate)
       const totalTax = orderData.totalAmount - totalNet
 
       console.log("📊 Billbee Order Data:", {
@@ -246,8 +256,9 @@ export class BillbeeAPI {
       const orderItems = orderData.items.map((item, index) => {
         // Calculate total price: price per day * number of days * quantity
         const numberOfDays = (item as any).numberOfDays || 1
-        const itemGross = item.price * numberOfDays * item.quantity
-        const itemTax = Math.round((itemGross * 19) / 100 * 100) / 100 // 19% tax
+        const itemGross = item.totalPrice ?? item.price * numberOfDays * item.quantity
+        const itemVatRate = (item.taxRate ?? orderData.vatRate ?? 21) / 100
+        const itemTax = Math.round((itemGross * itemVatRate) * 100) / 100
 
         // Generate calendar link for this item
         let calendarNote = ""
@@ -285,7 +296,7 @@ export class BillbeeAPI {
           Quantity: item.quantity,
           TotalPrice: Math.round(itemGross * 100) / 100,
           TaxAmount: itemTax,
-          TaxIndex: 19,
+          TaxIndex: Math.round((itemVatRate * 100)) || 0,
           Attributes: calendarNote ? [
             {
               Name: "Calendar Links",
@@ -350,10 +361,11 @@ export class BillbeeAPI {
         OrderNumber: orderData.orderId,
         ExternalReference: orderData.paymentIntentId,
         State: 1,
-        CreatedAt: new Date().toISOString(),
+        CreatedAt: orderData.paymentDate || new Date().toISOString(),
+        PaymentDate: orderData.paymentDate || new Date().toISOString(),
         PaymentMethod: 1, // Billbee numeric code
         PaymentMethodName: orderData.paymentMethod || "Online Payment",
-        ShippingCost: 0.00,
+        ShippingCost: Math.round(((orderData.deliveryInfo?.fee ?? 0)) * 100) / 100,
         Currency: "EUR",
         TotalCost: Math.round(orderItems.reduce((sum, item) => sum + item.TotalPrice, 0) * 100) / 100,
         OrderItems: orderItems,

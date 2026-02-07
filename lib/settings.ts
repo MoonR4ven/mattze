@@ -4,6 +4,17 @@ import { doc, getDoc, setDoc } from "firebase/firestore"
 export interface AppSettings {
   vatRate: number // VAT rate as percentage (e.g., 21 for 21%)
   currency: string
+  deliveryOriginAddress: string
+  deliveryBaseRadiusKm: number
+  deliveryBaseFee: number
+  deliveryPerKmFee: number
+  assemblyFee: number
+  pickupLocations: Array<{
+    id: string
+    name: string
+    address: string
+  }>
+  pickupSelectionLimit: number
   updatedAt: string
 }
 
@@ -12,6 +23,13 @@ const SETTINGS_DOC_ID = "app-settings"
 const defaultSettings: AppSettings = {
   vatRate: 21,
   currency: "EUR",
+  deliveryOriginAddress: "",
+  deliveryBaseRadiusKm: 10,
+  deliveryBaseFee: 20,
+  deliveryPerKmFee: 1,
+  assemblyFee: 0,
+  pickupLocations: [],
+  pickupSelectionLimit: 2,
   updatedAt: new Date().toISOString(),
 }
 

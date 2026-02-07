@@ -11,6 +11,8 @@ import { Lock, CreditCard, AlertCircle } from "lucide-react"
 import { useCart } from "@/hooks/use-cart"
 import { useRouter } from "next/navigation"
 import { useI18n } from "@/contexts/i18n-context"
+import { getSettings, type AppSettings } from "@/lib/settings"
+import { calculateSubtotal, calculateTaxTotal } from "@/lib/cart-pricing"
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
@@ -34,13 +36,22 @@ interface StripePaymentFormProps {
 function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
   const stripe = useStripe()
   const elements = useElements()
-  const { items, getTotalPrice, clearCart } = useCart()
+  const { items, clearCart, deliveryFee, fulfillmentOption, deliveryDistanceKm, pickupLocations } = useCart()
   const router = useRouter()
+  const [settings, setSettings] = useState<AppSettings | null>(null)
 
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const totalAmount = getTotalPrice() * 1.21 // Including 21% VAT
+  useEffect(() => {
+    getSettings().then(setSettings).catch(() => setSettings(null))
+  }, [])
+
+  const subtotal = calculateSubtotal(items)
+  const vatRate = settings?.vatRate ?? 21
+  const tax = calculateTaxTotal(items, vatRate)
+  const deliveryTotal = deliveryFee ?? 0
+  const totalAmount = subtotal + tax + deliveryTotal
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -84,6 +95,17 @@ function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
             sessionStorage.setItem("lastOrder", JSON.stringify({
               customerInfo,
               items,
+              fulfillmentOption,
+              deliveryDistanceKm,
+              deliveryFee: deliveryTotal,
+              pickupLocations,
+              pricing: {
+                subtotal,
+                tax,
+                vatRate,
+                deliveryFee: deliveryTotal,
+                total: totalAmount,
+              },
             }))
             clearCart()
             router.push("/checkout/success")
@@ -167,13 +189,22 @@ function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
 }
 
 export function StripePaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
-  const { items, getTotalPrice } = useCart()
+  const { items, deliveryFee, fulfillmentOption, deliveryDistanceKm, pickupLocations } = useCart()
   const { locale } = useI18n()
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [settings, setSettings] = useState<AppSettings | null>(null)
 
-  const totalAmount = getTotalPrice() * 1.21 // Including 21% VAT
+  useEffect(() => {
+    getSettings().then(setSettings).catch(() => setSettings(null))
+  }, [])
+
+  const subtotal = calculateSubtotal(items)
+  const vatRate = settings?.vatRate ?? 21
+  const tax = calculateTaxTotal(items, vatRate)
+  const deliveryTotal = deliveryFee ?? 0
+  const totalAmount = subtotal + tax + deliveryTotal
 
   useEffect(() => {
     const createPaymentIntent = async () => {
@@ -189,6 +220,19 @@ export function StripePaymentForm({ customerInfo, onBack }: StripePaymentFormPro
             customerInfo,
             items: items,
             locale: locale,
+            deliveryInfo: {
+              fulfillmentOption,
+              distanceKm: deliveryDistanceKm,
+              fee: deliveryTotal,
+              pickupLocations,
+            },
+            pricing: {
+              subtotal,
+              tax,
+              vatRate,
+              deliveryFee: deliveryTotal,
+              total: totalAmount,
+            },
           }),
         })
 
@@ -207,7 +251,7 @@ export function StripePaymentForm({ customerInfo, onBack }: StripePaymentFormPro
     }
 
     createPaymentIntent()
-  }, [items, customerInfo, totalAmount])
+  }, [items, customerInfo, totalAmount, fulfillmentOption, deliveryDistanceKm, deliveryTotal, pickupLocations, locale])
 
   if (loading) {
     return (

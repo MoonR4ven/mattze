@@ -18,6 +18,7 @@ import { Separator } from "@/components/ui/separator"
 import { DateRange, DayPicker } from "react-day-picker"
 import { getAvailableQuantityForDate } from "@/lib/bookings"
 import { useI18n } from "@/contexts/i18n-context"
+import { getPricePerDay } from "@/lib/pricing"
 import "react-day-picker/dist/style.css"
 
 interface TimeBookingDialogProps {
@@ -135,7 +136,8 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
     dateString => new Date(dateString)
   )
 
-  const totalPrice = product.price * numberOfDays * quantity
+  const pricePerDay = getPricePerDay(product, numberOfDays)
+  const totalPrice = pricePerDay * numberOfDays * quantity
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -330,8 +332,8 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
 
                 <div className="p-2 sm:p-3 bg-[#d9d9d9] rounded-lg border space-y-1.5 sm:space-y-2">
                   <div className="flex justify-between items-center text-[10px] sm:text-xs">
-                    <span className="text-gray-600">€{product.price.toFixed(2)} × {quantity} × {numberOfDays}</span>
-                    <span className="font-semibold">€{(product.price * quantity * numberOfDays).toFixed(2)}</span>
+                    <span className="text-gray-600">€{pricePerDay.toFixed(2)} × {quantity} × {numberOfDays}</span>
+                    <span className="font-semibold">€{(pricePerDay * quantity * numberOfDays).toFixed(2)}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between items-center">

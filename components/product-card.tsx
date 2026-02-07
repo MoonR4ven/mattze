@@ -11,6 +11,7 @@ import Link from "next/link"
 import { useCart } from "@/hooks/use-cart"
 import { useI18n } from "@/contexts/i18n-context"
 import { TimeBookingDialog } from "./time-booking-dialog"
+import { getPricePerDay } from "@/lib/pricing"
 
 interface ProductCardProps {
   product: Product
@@ -43,10 +44,15 @@ export function ProductCard({ product }: ProductCardProps) {
   }
 
   const handleAddToCart = (startDate?: string, endDate?: string, days?: number, quantity?: number) => {
-    const totalPrice = days ? product.price * days * (quantity || 1) : product.price
+    const safeDays = days || 1
+    const pricePerDay = getPricePerDay(product, safeDays)
+    const totalPrice = pricePerDay * safeDays * (quantity || 1)
 
     addToCart({
       ...product,
+      price: pricePerDay,
+      pricePerDay,
+      taxRate: product.taxRate,
       quantity: quantity || 1,
       startDate,
       endDate,

@@ -5,9 +5,6 @@ import {
   getDocs,
   doc,
   getDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
 } from 'firebase/firestore'
 
 const productsCollection = collection(db, 'products')
@@ -50,10 +47,17 @@ export async function getProduct(id: string): Promise<Product | null> {
 
 export async function addProduct(product: Omit<Product, 'id'>): Promise<string | null> {
   try {
-    const now = new Date().toISOString()
-    const payload = { ...product, created_at: now, updated_at: now }
-    const ref = await addDoc(productsCollection, payload as any)
-    return ref.id
+    const response = await fetch("/api/products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(product),
+    })
+
+    const result = await response.json()
+    if (response.ok && result.success) {
+      return result.id as string
+    }
+    throw new Error(result.error || "Failed to create product")
   } catch (error) {
     console.error('Error adding product to Firestore:', error)
     return null
@@ -62,9 +66,13 @@ export async function addProduct(product: Omit<Product, 'id'>): Promise<string |
 
 export async function updateProduct(id: string, updates: Partial<Product>): Promise<boolean> {
   try {
-    const ref = doc(db, 'products', id)
-    await updateDoc(ref, { ...updates, updated_at: new Date().toISOString() } as any)
-    return true
+    const response = await fetch("/api/products", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, updates }),
+    })
+    const result = await response.json()
+    return response.ok && result.success
   } catch (error) {
     console.error('Error updating product in Firestore:', error)
     return false
@@ -73,9 +81,13 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
 
 export async function deleteProduct(id: string): Promise<boolean> {
   try {
-    const ref = doc(db, 'products', id)
-    await deleteDoc(ref)
-    return true
+    const response = await fetch("/api/products", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    })
+    const result = await response.json()
+    return response.ok && result.success
   } catch (error) {
     console.error('Error deleting product from Firestore:', error)
     return false

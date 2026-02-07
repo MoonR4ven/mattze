@@ -77,6 +77,8 @@ export function Header() {
                   onClick={handleAuthAction}
                   className="hidden sm:flex hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] transition-all"
                   suppressHydrationWarning
+                  aria-label={user ? t("nav.logout") : t("nav.login")}
+                  title={user ? t("nav.logout") : t("nav.login")}
                 >
                   {user ? (
                     <>
@@ -84,10 +86,7 @@ export function Header() {
                       <span className="hidden md:inline">{t("nav.logout")}</span>
                     </>
                   ) : (
-                    <>
-                      <User className="h-5 w-5 mr-2" />
-                      <span className="hidden md:inline">{t("nav.login")}</span>
-                    </>
+                    <User className="h-5 w-5" />
                   )}
                 </Button>
               </>
@@ -139,6 +138,8 @@ export function Header() {
                       onClick={handleAuthAction}
                       className="w-full justify-start hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] transition-all"
                       suppressHydrationWarning
+                      aria-label={user ? t("nav.logout") : t("nav.login")}
+                      title={user ? t("nav.logout") : t("nav.login")}
                     >
                       {user ? (
                         <>
@@ -146,10 +147,7 @@ export function Header() {
                           {t("nav.logout")}
                         </>
                       ) : (
-                        <>
-                          <User className="h-5 w-5 mr-2" />
-                          {t("nav.login")}
-                        </>
+                        <User className="h-5 w-5" />
                       )}
                     </Button>
                   </div>

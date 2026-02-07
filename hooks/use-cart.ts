@@ -7,12 +7,19 @@ import type { CartItem } from "@/lib/types"
 interface CartStore {
   items: CartItem[]
   isOpen: boolean
+  fulfillmentOption: "delivery-collection" | "delivery-assembly" | "self-collection"
+  deliveryDistanceKm?: number
+  deliveryFee?: number
+  pickupLocations: Array<{ id: string; name: string; address: string }>
   addToCart: (item: CartItem) => void
   removeFromCart: (id: string, startDate?: string, endDate?: string, selectedDate?: string) => void
   updateQuantity: (id: string, quantity: number, startDate?: string, endDate?: string, selectedDate?: string) => void
   clearCart: () => void
   getTotalPrice: () => number
   getTotalItems: () => number
+  setFulfillmentOption: (option: "delivery-collection" | "delivery-assembly" | "self-collection") => void
+  setDeliveryDetails: (details: { distanceKm?: number; fee?: number }) => void
+  setPickupLocations: (locations: Array<{ id: string; name: string; address: string }>) => void
   toggleCart: () => void
   openCart: () => void
   closeCart: () => void
@@ -23,6 +30,10 @@ export const useCart = create<CartStore>()(
     (set, get) => ({
       items: [],
       isOpen: false,
+      fulfillmentOption: "self-collection",
+      deliveryDistanceKm: undefined,
+      deliveryFee: undefined,
+      pickupLocations: [],
 
       addToCart: (item) => {
         set({ isOpen: true })
@@ -37,6 +48,7 @@ export const useCart = create<CartStore>()(
           )
 
           if (existingItem) {
+            const newQuantity = existingItem.quantity + item.quantity
             return {
               items: state.items.map((i) =>
                 i.id === item.id &&
@@ -44,7 +56,11 @@ export const useCart = create<CartStore>()(
                 i.endDate === item.endDate &&
                 i.selectedDate === item.selectedDate &&
                 i.selectedTime === item.selectedTime
-                  ? { ...i, quantity: i.quantity + item.quantity }
+                  ? {
+                      ...i,
+                      quantity: newQuantity,
+                      totalPrice: (i.price * (i.numberOfDays || 1) * newQuantity),
+                    }
                   : i,
               ),
             }
@@ -83,13 +99,17 @@ export const useCart = create<CartStore>()(
             const selectedDateMatch = selectedDate ? item.selectedDate === selectedDate : true
             
             return idMatch && startDateMatch && endDateMatch && selectedDateMatch
-              ? { ...item, quantity }
+              ? {
+                  ...item,
+                  quantity,
+                  totalPrice: item.price * (item.numberOfDays || 1) * quantity,
+                }
               : item
           }),
         }))
       },
 
-      clearCart: () => set({ items: [] }),
+      clearCart: () => set({ items: [], fulfillmentOption: "self-collection", deliveryDistanceKm: undefined, deliveryFee: undefined, pickupLocations: [] }),
 
       getTotalPrice: () => {
         return get().items.reduce((total, item) => {
@@ -100,6 +120,18 @@ export const useCart = create<CartStore>()(
 
       getTotalItems: () => {
         return get().items.reduce((total, item) => total + item.quantity, 0)
+      },
+
+      setFulfillmentOption: (option) => {
+        set({ fulfillmentOption: option })
+      },
+
+      setDeliveryDetails: (details) => {
+        set({ deliveryDistanceKm: details.distanceKm, deliveryFee: details.fee })
+      },
+
+      setPickupLocations: (locations) => {
+        set({ pickupLocations: locations })
       },
 
       toggleCart: () => {

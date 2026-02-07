@@ -10,10 +10,24 @@ import Link from "next/link"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/contexts/i18n-context"
+import { useEffect, useState } from "react"
+import { getSettings, type AppSettings } from "@/lib/settings"
+import { calculateSubtotal, calculateTaxTotal } from "@/lib/cart-pricing"
 
 export function CartSidebar() {
-  const { items, isOpen, closeCart, removeFromCart, updateQuantity, getTotalPrice, getTotalItems } = useCart()
+  const { items, isOpen, closeCart, removeFromCart, updateQuantity, getTotalItems, deliveryFee, fulfillmentOption } = useCart()
   const { t } = useI18n()
+  const [settings, setSettings] = useState<AppSettings | null>(null)
+
+  useEffect(() => {
+    getSettings().then(setSettings).catch(() => setSettings(null))
+  }, [])
+
+  const subtotal = calculateSubtotal(items)
+  const vatRate = settings?.vatRate ?? 21
+  const tax = calculateTaxTotal(items, vatRate)
+  const deliveryTotal = deliveryFee ?? 0
+  const total = subtotal + tax + deliveryTotal
 
   return (
     <>
@@ -122,8 +136,8 @@ export function CartSidebar() {
                       </Button>
                     </div>
                     <div className="text-right">
-                      <div className="font-semibold text-sm">€{(item.price * item.quantity).toFixed(2)}</div>
-                      <div className="text-xs text-muted-foreground">€{item.price.toFixed(2)} each</div>
+                      <div className="font-semibold text-sm">€{(item.totalPrice ?? item.price * item.quantity).toFixed(2)}</div>
+                      <div className="text-xs text-muted-foreground">€{item.price.toFixed(2)} / day</div>
                     </div>
                   </div>
                 </div>
@@ -134,16 +148,22 @@ export function CartSidebar() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t("cart.subtotal")}</span>
-                  <span className="font-medium">€{getTotalPrice().toFixed(2)}</span>
+                  <span className="font-medium">€{subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{t("cart.delivery")}</span>
+                  <span className="font-medium">
+                    {fulfillmentOption === "self-collection" ? t("cart.free") : (deliveryFee != null ? `€${deliveryTotal.toFixed(2)}` : t("cart.deliveryCalculated"))}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t("cart.tax")}</span>
-                  <span className="font-medium">€{(getTotalPrice() * 0.21).toFixed(2)}</span>
+                  <span className="font-medium">€{tax.toFixed(2)}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between font-semibold text-lg">
                   <span>{t("cart.total")}</span>
-                  <span>€{(getTotalPrice() * 1.21).toFixed(2)}</span>
+                  <span>€{total.toFixed(2)}</span>
                 </div>
               </div>
 

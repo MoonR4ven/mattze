@@ -41,3 +41,65 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const now = new Date().toISOString()
+    const docRef = await db.collection("products").add({
+      ...body,
+      created_at: now,
+      updated_at: now,
+    })
+
+    return NextResponse.json({ success: true, id: docRef.id })
+  } catch (error) {
+    console.error("❌ Error creating product:", error)
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : "Unknown error" },
+      { status: 500 },
+    )
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { id, updates } = body
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Missing product id" }, { status: 400 })
+    }
+
+    await db.collection("products").doc(id).update({
+      ...updates,
+      updated_at: new Date().toISOString(),
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("❌ Error updating product:", error)
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : "Unknown error" },
+      { status: 500 },
+    )
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { id } = body
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Missing product id" }, { status: 400 })
+    }
+
+    await db.collection("products").doc(id).delete()
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("❌ Error deleting product:", error)
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : "Unknown error" },
+      { status: 500 },
+    )
+  }
+}

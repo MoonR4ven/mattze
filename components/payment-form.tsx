@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useCart } from "@/hooks/use-cart"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { CreditCard, ArrowLeft, Lock } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { getSettings, type AppSettings } from "@/lib/settings"
+import { calculateSubtotal, calculateTaxTotal } from "@/lib/cart-pricing"
 
 interface CustomerInfo {
   firstName: string
@@ -31,8 +33,9 @@ interface PaymentFormProps {
 }
 
 export function PaymentForm({ customerInfo, onBack }: PaymentFormProps) {
-  const { items, getTotalPrice, clearCart } = useCart()
+  const { items, clearCart, deliveryFee } = useCart()
   const router = useRouter()
+  const [settings, setSettings] = useState<AppSettings | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<"card" | "ideal" | "paypal">("card")
   const [processing, setProcessing] = useState(false)
   const [acceptTerms, setAcceptTerms] = useState(false)
@@ -42,6 +45,16 @@ export function PaymentForm({ customerInfo, onBack }: PaymentFormProps) {
     cvc: "",
     name: "",
   })
+
+  useEffect(() => {
+    getSettings().then(setSettings).catch(() => setSettings(null))
+  }, [])
+
+  const subtotal = calculateSubtotal(items)
+  const vatRate = settings?.vatRate ?? 21
+  const tax = calculateTaxTotal(items, vatRate)
+  const deliveryTotal = deliveryFee ?? 0
+  const totalAmount = subtotal + tax + deliveryTotal
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -55,7 +68,7 @@ export function PaymentForm({ customerInfo, onBack }: PaymentFormProps) {
       const orderData = {
         items,
         customerInfo,
-        totalAmount: getTotalPrice() * 1.21, // Including tax
+        totalAmount: totalAmount, // Including tax and delivery
         paymentMethod,
         status: "confirmed",
       }
@@ -208,7 +221,7 @@ export function PaymentForm({ customerInfo, onBack }: PaymentFormProps) {
               ) : (
                 <>
                   <Lock className="h-4 w-4 mr-2" />
-                  Complete Order €{(getTotalPrice() * 1.21).toFixed(2)}
+                  Complete Order €{totalAmount.toFixed(2)}
                 </>
               )}
             </Button>

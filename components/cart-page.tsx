@@ -9,9 +9,36 @@ import { ShoppingCart, Trash2, Plus, Minus, Calendar, Clock, ArrowRight } from "
 import Image from "next/image"
 import Link from "next/link"
 import { format } from "date-fns"
+import { useEffect, useState } from "react"
+import { getSettings, type AppSettings } from "@/lib/settings"
+import { calculateSubtotal, calculateTaxTotal } from "@/lib/cart-pricing"
 
 export function CartPage() {
-  const { items, removeFromCart, updateQuantity, getTotalPrice, getTotalItems, clearCart } = useCart()
+  const {
+    items,
+    removeFromCart,
+    updateQuantity,
+    getTotalItems,
+    clearCart,
+    fulfillmentOption,
+    setFulfillmentOption,
+    deliveryFee,
+    deliveryDistanceKm,
+    setDeliveryDetails,
+    pickupLocations,
+    setPickupLocations,
+  } = useCart()
+  const [settings, setSettings] = useState<AppSettings | null>(null)
+
+  useEffect(() => {
+    getSettings().then(setSettings).catch(() => setSettings(null))
+  }, [])
+
+  const subtotal = calculateSubtotal(items)
+  const vatRate = settings?.vatRate ?? 21
+  const tax = calculateTaxTotal(items, vatRate)
+  const deliveryTotal = deliveryFee ?? 0
+  const total = subtotal + tax + deliveryTotal
 
   if (items.length === 0) {
     return (
@@ -66,7 +93,7 @@ export function CartPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => removeFromCart(item.id)}
+                        onClick={() => removeFromCart(item.id, item.startDate, item.endDate, item.selectedDate)}
                         className="text-destructive hover:text-destructive h-8 w-8 p-0 flex-shrink-0"
                       >
                         <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -91,19 +118,19 @@ export function CartPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.id, item.quantity - 1, item.startDate, item.endDate, item.selectedDate)}
                           disabled={item.quantity <= 1}
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
                         <span className="w-8 text-center">{item.quantity}</span>
-                        <Button variant="outline" size="sm" onClick={() => updateQuantity(item.id, item.quantity + 1)}>
+                        <Button variant="outline" size="sm" onClick={() => updateQuantity(item.id, item.quantity + 1, item.startDate, item.endDate, item.selectedDate)}>
                           <Plus className="h-3 w-3" />
                         </Button>
                       </div>
                       <div className="text-right">
-                        <div className="font-semibold">€{(item.price * item.quantity).toFixed(2)}</div>
-                        <div className="text-sm text-muted-foreground">€{item.price.toFixed(2)} each</div>
+                        <div className="font-semibold">€{(item.totalPrice ?? item.price * item.quantity).toFixed(2)}</div>
+                        <div className="text-sm text-muted-foreground">€{item.price.toFixed(2)} / day</div>
                       </div>
                     </div>
                   </div>
@@ -123,6 +150,77 @@ export function CartPage() {
           </div>
 
           <div className="lg:col-span-1">
+            <Card className="mb-4 bg-slate-100">
+              <CardHeader>
+                <CardTitle>Fulfillment</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid gap-2">
+                  {[
+                    { value: "self-collection", label: "Self-Collection" },
+                    { value: "delivery-collection", label: "Delivery and Collection" },
+                    { value: "delivery-assembly", label: "Delivery, Setup, Dismantling and Collection" },
+                  ].map((option) => (
+                    <label key={option.value} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="radio"
+                        name="fulfillment"
+                        value={option.value}
+                        checked={fulfillmentOption === option.value}
+                        onChange={() => {
+                          setFulfillmentOption(option.value as typeof fulfillmentOption)
+                          if (option.value === "self-collection") {
+                            setDeliveryDetails({ distanceKm: undefined, fee: 0 })
+                          } else {
+                            setPickupLocations([])
+                          }
+                        }}
+                      />
+                      {option.label}
+                    </label>
+                  ))}
+                </div>
+
+                {fulfillmentOption === "self-collection" && settings?.pickupLocations?.length ? (
+                  <div className="space-y-2">
+                    <div className="text-xs text-muted-foreground">Select pickup location(s) (up to {settings.pickupSelectionLimit})</div>
+                    <div className="grid gap-2">
+                      {settings.pickupLocations.map((location) => {
+                        const selected = pickupLocations.some((pickup) => pickup.id === location.id)
+                        const disabled = !selected && pickupLocations.length >= settings.pickupSelectionLimit
+                        return (
+                          <label key={location.id} className="flex items-start gap-2 text-xs">
+                            <input
+                              type="checkbox"
+                              checked={selected}
+                              disabled={disabled}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setPickupLocations([...pickupLocations, location])
+                                } else {
+                                  setPickupLocations(pickupLocations.filter((pickup) => pickup.id !== location.id))
+                                }
+                              }}
+                            />
+                            <span>
+                              <span className="font-semibold">{location.name}</span>
+                              <span className="block text-muted-foreground">{location.address}</span>
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+
+                {fulfillmentOption !== "self-collection" && (
+                  <div className="text-xs text-muted-foreground">
+                    Delivery fee is calculated at checkout after entering the address.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <Card className="sticky top-4 bg-slate-100">
               <CardHeader>
                 <CardTitle>Order Summary</CardTitle>
@@ -131,15 +229,15 @@ export function CartPage() {
                 <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal ({getTotalItems()} items)</span>
-                  <span>€{getTotalPrice().toFixed(2)}</span>
+                  <span>€{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Delivery</span>
-                  <span>Free</span>
+                  <span>{fulfillmentOption === "self-collection" ? "Free" : (deliveryFee != null ? `€${deliveryTotal.toFixed(2)}` : "Calculated at checkout")}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Tax</span>
-                  <span>€{(getTotalPrice() * 0.21).toFixed(2)}</span>
+                  <span>€{tax.toFixed(2)}</span>
                 </div>
               </div>
 
@@ -147,7 +245,7 @@ export function CartPage() {
 
               <div className="flex justify-between font-semibold text-lg">
                 <span>Total</span>
-                <span>€{(getTotalPrice() * 1.21).toFixed(2)}</span>
+                <span>€{total.toFixed(2)}</span>
               </div>
 
               <Button asChild className="w-full" size="lg">

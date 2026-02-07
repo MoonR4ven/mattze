@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useCart } from "@/hooks/use-cart"
 import { useI18n } from "@/contexts/i18n-context"
 import { Button } from "@/components/ui/button"
@@ -18,6 +18,7 @@ import { StripePaymentForm } from "@/components/stripe-payment-form"
 import { ShoppingCart, User, Calendar, Clock, ChevronDown } from "lucide-react"
 import { format } from "date-fns"
 import Link from "next/link"
+import { getSettings, type AppSettings } from "@/lib/settings"
 
 interface CustomerInfo {
   firstName: string
@@ -32,8 +33,21 @@ interface CustomerInfo {
 }
 
 export function CheckoutPage() {
-  const { items, getTotalPrice, getTotalItems } = useCart()
+  const {
+    items,
+    getTotalItems,
+    fulfillmentOption,
+    setFulfillmentOption,
+    deliveryDistanceKm,
+    deliveryFee,
+    setDeliveryDetails,
+    pickupLocations,
+    setPickupLocations,
+  } = useCart()
   const { t } = useI18n()
+  const [settings, setSettings] = useState<AppSettings | null>(null)
+  const [distanceLoading, setDistanceLoading] = useState(false)
+  const [distanceError, setDistanceError] = useState<string | null>(null)
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
     firstName: "",
     lastName: "",
@@ -47,6 +61,66 @@ export function CheckoutPage() {
   })
   const [currentStep, setCurrentStep] = useState<"info" | "payment">("info")
   const [isOrderItemsOpen, setIsOrderItemsOpen] = useState(true)
+
+  useEffect(() => {
+    getSettings().then(setSettings).catch(() => setSettings(null))
+  }, [])
+
+  useEffect(() => {
+    if (fulfillmentOption === "self-collection") {
+      setDistanceError(null)
+      setDeliveryDetails({ distanceKm: undefined, fee: 0 })
+      return
+    }
+
+    const hasAddress = Boolean(customerInfo.address && customerInfo.city && customerInfo.postalCode)
+    const origin = settings?.deliveryOriginAddress
+    if (!hasAddress || !origin) {
+      return
+    }
+
+    const controller = new AbortController()
+    const timer = setTimeout(async () => {
+      setDistanceLoading(true)
+      setDistanceError(null)
+      try {
+        const destination = `${customerInfo.address}, ${customerInfo.postalCode} ${customerInfo.city}, ${customerInfo.country || ""}`
+        const response = await fetch("/api/delivery-distance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ origin, destination }),
+          signal: controller.signal,
+        })
+
+        const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to calculate distance")
+        }
+
+        const distanceKm = data.distanceKm as number
+        const baseRadius = settings?.deliveryBaseRadiusKm ?? 10
+        const baseFee = settings?.deliveryBaseFee ?? 20
+        const perKm = settings?.deliveryPerKmFee ?? 1
+        const assemblyFee = fulfillmentOption === "delivery-assembly" ? (settings?.assemblyFee ?? 0) : 0
+        const extraKm = Math.max(0, distanceKm - baseRadius)
+        const fee = baseFee + extraKm * perKm + assemblyFee
+        setDeliveryDetails({ distanceKm, fee: Math.round(fee * 100) / 100 })
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setDistanceError(error instanceof Error ? error.message : "Failed to calculate distance")
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setDistanceLoading(false)
+        }
+      }
+    }, 500)
+
+    return () => {
+      controller.abort()
+      clearTimeout(timer)
+    }
+  }, [customerInfo.address, customerInfo.city, customerInfo.postalCode, customerInfo.country, fulfillmentOption, settings, setDeliveryDetails])
 
   if (items.length === 0) {
     return (
@@ -73,15 +147,21 @@ export function CheckoutPage() {
   }
 
   const isInfoComplete = () => {
-    return (
+    const baseComplete =
       customerInfo.firstName &&
       customerInfo.lastName &&
       customerInfo.email &&
-      customerInfo.phone &&
-      customerInfo.address &&
-      customerInfo.city &&
-      customerInfo.postalCode
-    )
+      customerInfo.phone
+
+    if (!baseComplete) return false
+
+    if (fulfillmentOption === "self-collection") {
+      return true
+    }
+
+    const addressComplete = customerInfo.address && customerInfo.city && customerInfo.postalCode
+    const deliveryCalculated = deliveryFee != null && !distanceLoading && !distanceError
+    return Boolean(addressComplete && deliveryCalculated)
   }
 
   return (
@@ -176,7 +256,7 @@ export function CheckoutPage() {
                       id="address"
                       value={customerInfo.address}
                       onChange={(e) => updateCustomerInfo("address", e.target.value)}
-                      required
+                      required={fulfillmentOption !== "self-collection"}
                     />
                   </div>
 
@@ -187,7 +267,7 @@ export function CheckoutPage() {
                         id="city"
                         value={customerInfo.city}
                         onChange={(e) => updateCustomerInfo("city", e.target.value)}
-                        required
+                        required={fulfillmentOption !== "self-collection"}
                       />
                     </div>
                     <div className="space-y-2">
@@ -196,7 +276,7 @@ export function CheckoutPage() {
                         id="postalCode"
                         value={customerInfo.postalCode}
                         onChange={(e) => updateCustomerInfo("postalCode", e.target.value)}
-                        required
+                        required={fulfillmentOption !== "self-collection"}
                       />
                     </div>
                     <div className="space-y-2">
@@ -205,9 +285,86 @@ export function CheckoutPage() {
                         id="country"
                         value={customerInfo.country}
                         onChange={(e) => updateCustomerInfo("country", e.target.value)}
-                        required
+                        required={fulfillmentOption !== "self-collection"}
                       />
                     </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">{t("checkout.fulfillment")}</Label>
+                    <div className="grid gap-2">
+                      {[
+                        { value: "self-collection", label: t("checkout.selfCollection") },
+                        { value: "delivery-collection", label: t("checkout.deliveryCollection") },
+                        { value: "delivery-assembly", label: t("checkout.deliveryAssembly") },
+                      ].map((option) => (
+                        <label key={option.value} className="flex items-start gap-2 rounded-lg border p-3 bg-white/50 text-sm">
+                          <input
+                            type="radio"
+                            name="fulfillment"
+                            value={option.value}
+                            checked={fulfillmentOption === option.value}
+                            onChange={() => {
+                              setFulfillmentOption(option.value as typeof fulfillmentOption)
+                              if (option.value !== "self-collection") {
+                                setPickupLocations([])
+                              }
+                            }}
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      ))}
+                    </div>
+
+                    {fulfillmentOption === "self-collection" && settings?.pickupLocations?.length ? (
+                      <div className="space-y-2">
+                        <div className="text-xs text-muted-foreground">
+                          {t("checkout.pickupLimit").replace("{count}", String(settings.pickupSelectionLimit))}
+                        </div>
+                        <div className="grid gap-2">
+                          {settings.pickupLocations.map((location) => {
+                            const selected = pickupLocations.some((pickup) => pickup.id === location.id)
+                            const disabled = !selected && pickupLocations.length >= settings.pickupSelectionLimit
+                            return (
+                              <label key={location.id} className="flex items-start gap-2 rounded-lg border p-2 text-xs bg-white/50">
+                                <input
+                                  type="checkbox"
+                                  checked={selected}
+                                  disabled={disabled}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setPickupLocations([...pickupLocations, location])
+                                    } else {
+                                      setPickupLocations(pickupLocations.filter((pickup) => pickup.id !== location.id))
+                                    }
+                                  }}
+                                />
+                                <span>
+                                  <span className="font-semibold">{location.name}</span>
+                                  <span className="block text-muted-foreground">{location.address}</span>
+                                </span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {fulfillmentOption !== "self-collection" && (
+                      <div className="text-xs text-muted-foreground">
+                        {distanceLoading && t("checkout.calculatingDistance")}
+                        {!distanceLoading && deliveryDistanceKm != null && (
+                          <span>
+                            {t("checkout.distanceResult")
+                              .replace("{distance}", deliveryDistanceKm.toFixed(1))
+                              .replace("{fee}", (deliveryFee ?? 0).toFixed(2))}
+                          </span>
+                        )}
+                        {!distanceLoading && distanceError && (
+                          <span className="text-destructive">{distanceError}</span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-2">

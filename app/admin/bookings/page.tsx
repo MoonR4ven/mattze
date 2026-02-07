@@ -252,7 +252,8 @@ export default function AdminBookingsPage() {
         <Card className="border-2">
           <CardContent className="p-0">
             {filteredBookings.length > 0 ? (
-              <Table>
+              <div className="w-full overflow-x-auto">
+                <Table className="min-w-[720px]">
                 <TableHeader>
                   <TableRow className="bg-gray-50/50">
                     <TableHead className="font-semibold">{t("admin.product")}</TableHead>
@@ -303,7 +304,8 @@ export default function AdminBookingsPage() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
             ) : (
               <div className="text-center py-12">
                 <Calendar className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />

@@ -48,6 +48,8 @@ interface ProductFormData {
   description: string
   type: string
   price: number
+  taxRate: number
+  pricingTiers: Array<{ minDays: number; pricePerDay: number }>
   image: string
   images: string[]
   available: boolean
@@ -63,6 +65,8 @@ const initialFormData: ProductFormData = {
   description: "",
   type: "",
   price: 0,
+  taxRate: 21,
+  pricingTiers: [],
   image: "",
   images: [],
   available: true,
@@ -86,6 +90,8 @@ export default function AdminProductsPage() {
   const [newFeature, setNewFeature] = useState("")
   const [newSpecKey, setNewSpecKey] = useState("")
   const [newSpecValue, setNewSpecValue] = useState("")
+  const [newTierDays, setNewTierDays] = useState("")
+  const [newTierPrice, setNewTierPrice] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [uploadingImage, setUploadingImage] = useState(false)
   const { t } = useI18n()
@@ -115,6 +121,8 @@ export default function AdminProductsPage() {
     setNewFeature("")
     setNewSpecKey("")
     setNewSpecValue("")
+    setNewTierDays("")
+    setNewTierPrice("")
     setUploadingImage(false)
   }
 
@@ -126,6 +134,8 @@ export default function AdminProductsPage() {
       const dataToSave = {
         ...formData,
         price: Number(formData.price) || 0,
+        taxRate: Number(formData.taxRate) || 0,
+        pricingTiers: (formData.pricingTiers || []).filter((tier) => tier.minDays > 0 && tier.pricePerDay >= 0),
       }
 
       if (editingProduct) {
@@ -173,6 +183,8 @@ export default function AdminProductsPage() {
       description: product.description || "",
       type: product.type || "",
       price: product.price ?? 0,
+      taxRate: product.taxRate ?? 21,
+      pricingTiers: product.pricingTiers || [],
       image: product.image || "",
       images: product.images || [],
       available: product.available ?? true,
@@ -291,6 +303,26 @@ export default function AdminProductsPage() {
         specifications: newSpecs,
       }
     })
+  }
+
+  const addPricingTier = () => {
+    const minDays = Number(newTierDays)
+    const pricePerDay = Number(newTierPrice)
+    if (!Number.isFinite(minDays) || !Number.isFinite(pricePerDay) || minDays <= 0 || pricePerDay < 0) return
+
+    setFormData((prev) => ({
+      ...prev,
+      pricingTiers: [...prev.pricingTiers, { minDays, pricePerDay }].sort((a, b) => a.minDays - b.minDays),
+    }))
+    setNewTierDays("")
+    setNewTierPrice("")
+  }
+
+  const removePricingTier = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      pricingTiers: prev.pricingTiers.filter((_, i) => i !== index),
+    }))
   }
 
   const filteredProducts = products.filter(
@@ -497,6 +529,86 @@ export default function AdminProductsPage() {
                               placeholder="e.g., 50 persons"
                               className="h-11"
                             />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="taxRate" className="text-sm font-medium">
+                              {t("admin.taxRate")}
+                            </Label>
+                            <Input
+                              id="taxRate"
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="0.1"
+                              value={formData.taxRate}
+                              onChange={(e) => setFormData(prev => ({ ...prev, taxRate: Number(e.target.value) || 0 }))}
+                              placeholder="21"
+                              className="h-11"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              {t("admin.taxRateDescription")}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium">
+                            {t("admin.tieredPricing")}
+                          </Label>
+                          <div className="rounded-lg border bg-gray-50 p-3 space-y-3">
+                            {formData.pricingTiers.length > 0 ? (
+                              <div className="space-y-2">
+                                {formData.pricingTiers.map((tier, index) => (
+                                  <div key={`${tier.minDays}-${tier.pricePerDay}-${index}`} className="flex items-center justify-between gap-3 p-2 bg-[#d9d9d9] rounded-lg border">
+                                    <div className="text-xs">
+                                      {t("admin.minDays")} <span className="font-semibold">{tier.minDays}</span> — {t("admin.pricePerDay")} <span className="font-semibold">€{tier.pricePerDay.toFixed(2)}</span>
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => removePricingTier(index)}
+                                      className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-muted-foreground text-center py-2">
+                                {t("admin.noPricingTiers")}
+                              </p>
+                            )}
+                            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2">
+                              <Input
+                                type="number"
+                                min="1"
+                                value={newTierDays}
+                                onChange={(e) => setNewTierDays(e.target.value)}
+                                placeholder={t("admin.minDaysPlaceholder")}
+                                className="h-10"
+                              />
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={newTierPrice}
+                                onChange={(e) => setNewTierPrice(e.target.value)}
+                                placeholder={t("admin.pricePerDayPlaceholder")}
+                                className="h-10"
+                              />
+                              <Button
+                                type="button"
+                                onClick={addPricingTier}
+                                className="h-10 bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 text-white hover:text-black"
+                              >
+                                {t("admin.add")}
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </div>
