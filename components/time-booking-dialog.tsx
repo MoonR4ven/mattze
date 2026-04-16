@@ -1,12 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import type { Product } from "@/lib/types"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -19,6 +18,7 @@ import { DateRange, DayPicker } from "react-day-picker"
 import { getAvailableQuantityForDate } from "@/lib/bookings"
 import { useI18n } from "@/contexts/i18n-context"
 import { getPricePerDay } from "@/lib/pricing"
+import { useIsMobile } from "@/hooks/use-mobile"
 import "react-day-picker/dist/style.css"
 
 interface TimeBookingDialogProps {
@@ -35,6 +35,7 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
   const [loading, setLoading] = useState(false)
   const [availabilityError, setAvailabilityError] = useState<string>("")
   const { t, locale } = useI18n()
+  const isMobile = useIsMobile()
   
   // Get the appropriate date-fns locale
   const dateLocale = locale === "de" ? de : enUS
@@ -45,18 +46,7 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
   const inventory = product.inventory || 1
 
   // Fetch available quantities when dialog opens
-  useEffect(() => {
-    if (open && product.id) {
-      loadAvailability()
-    }
-  }, [open, product.id])
-
-  // Check availability error when quantity or date range changes
-  useEffect(() => {
-    checkAvailabilityForRange()
-  }, [quantity, startDate, endDate])
-
-  const loadAvailability = async () => {
+  const loadAvailability = useCallback(async () => {
     setLoading(true)
     try {
       // Fetch availability for the next 90 days
@@ -81,9 +71,9 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
     } finally {
       setLoading(false)
     }
-  }
+  }, [inventory, product.id])
 
-  const checkAvailabilityForRange = async () => {
+  const checkAvailabilityForRange = useCallback(async () => {
     if (!startDate || !endDate) {
       setAvailabilityError("")
       return
@@ -110,7 +100,18 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
     } catch (error) {
       console.error("Error checking availability:", error)
     }
-  }
+  }, [endDate, inventory, product.id, quantity, startDate, t])
+
+  useEffect(() => {
+    if (open && product.id) {
+      loadAvailability()
+    }
+  }, [loadAvailability, open, product.id])
+
+  // Check availability error when quantity or date range changes
+  useEffect(() => {
+    checkAvailabilityForRange()
+  }, [checkAvailabilityForRange])
 
   const handleConfirm = () => {
     if (startDate && endDate && !availabilityError) {
@@ -128,8 +129,8 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
   }
 
   const handleQuantityChange = (newQuantity: number) => {
-    if (newQuantity < 1) return
-    setQuantity(newQuantity)
+    const clampedQuantity = Math.max(1, Math.min(newQuantity, inventory))
+    setQuantity(clampedQuantity)
   }
 
   const disabledDates = Array.from(unavailableDates.keys()).map(
@@ -138,15 +139,19 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
 
   const pricePerDay = getPricePerDay(product, numberOfDays)
   const totalPrice = pricePerDay * numberOfDays * quantity
+  const canDecreaseQuantity = quantity > 1
+  const canIncreaseQuantity = quantity < inventory
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="!max-w-[1200px] w-[95vw] sm:w-[90vw] max-h-[90vh] sm:max-h-[85vh] overflow-hidden p-0 gap-0 bg-[#d9d9d9] border-0 shadow-2xl">
+      <DialogContent className="max-w-[1200px] w-[calc(100vw-1rem)] sm:w-[90vw] max-h-[90vh] sm:max-h-[85vh] overflow-hidden p-0 gap-0 bg-[#d9d9d9] border-0 shadow-2xl">
         {/* Header */}
-        <div className="bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] px-4 sm:px-6 py-3">
-          <DialogTitle className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-            <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span className="truncate">{t("booking.title")} {product.name}</span>
+        <div className="bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] px-4 sm:px-6 py-3 pr-12 sm:pr-14">
+          <DialogTitle className="text-base sm:text-lg font-bold text-white flex items-start gap-2 min-w-0">
+            <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 mt-0.5" />
+            <span className="block min-w-0 break-words line-clamp-2 sm:line-clamp-1" title={`${t("booking.title")} ${product.name}`}>
+              {t("booking.title")} {product.name}
+            </span>
           </DialogTitle>
           <DialogDescription className="text-white/90 text-xs sm:text-sm">
             {t("booking.selectDates")}
@@ -159,28 +164,32 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
             {/* Quantity Selector */}
             <div className="space-y-1.5 sm:space-y-2">
               <Label className="text-xs sm:text-sm font-semibold">{t("booking.quantity")}</Label>
-              <div className="flex items-center gap-2 sm:gap-3 bg-gray-50 p-2 sm:p-3 rounded-lg border border-gray-200 max-w-md">
+              <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 bg-gray-50 p-2.5 sm:p-3 rounded-xl border border-gray-200 w-full max-w-md">
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => handleQuantityChange(quantity - 1)}
-                  disabled={quantity <= 1}
-                  className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg"
+                  disabled={!canDecreaseQuantity}
+                  className="h-11 w-11 sm:h-10 sm:w-10 rounded-lg"
+                  aria-label={t("booking.decreaseQuantity")}
                 >
-                  <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <Minus className="h-4 w-4" />
                 </Button>
-                <div className="flex-1 text-center">
-                  <div className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
+                <div className="text-center">
+                  <div className="text-2xl sm:text-2xl leading-none font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
                     {quantity}
                   </div>
+                  <div className="text-[10px] sm:text-xs text-gray-500 mt-1">1 - {inventory}</div>
                 </div>
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => handleQuantityChange(quantity + 1)}
-                  className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg"
+                  disabled={!canIncreaseQuantity}
+                  className="h-11 w-11 sm:h-10 sm:w-10 rounded-lg"
+                  aria-label={t("booking.increaseQuantity")}
                 >
-                  <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <Plus className="h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -192,20 +201,36 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
                 <span className="text-xs sm:text-sm">{t("booking.selectRentalDates")}</span>
                 {loading && <span className="text-xs text-gray-500">({t("booking.loading")})</span>}
               </Label>
-              <div className="border-2 border-gray-200 rounded-xl p-2 sm:p-4 bg-[#d9d9d9] flex-1 flex items-center justify-center overflow-auto">
+              <div className="border-2 border-gray-200 rounded-xl p-2 sm:p-4 bg-[#d9d9d9] flex-1 flex items-center justify-center overflow-x-hidden overflow-y-auto">
                 <style>{`
                   .custom-day-picker {
                     --rdp-accent-color: rgb(88, 198, 188);
                     --rdp-background-color: rgba(88, 198, 188, 0.2);
                     --rdp-accent-color-dark: rgb(5, 84, 150);
+                    --rdp-cell-size: 40px;
                   }
                   @media (max-width: 640px) {
                     .custom-day-picker {
                       font-size: 0.75rem;
+                      --rdp-cell-size: 32px;
+                      width: 100%;
+                      display: flex;
+                      justify-content: center;
                     }
                     .custom-day-picker .rdp-months {
                       display: flex;
                       flex-direction: column;
+                      justify-content: center;
+                      align-items: center;
+                    }
+                    .custom-day-picker .rdp-month {
+                      margin: 0;
+                      width: 100%;
+                      max-width: 320px;
+                    }
+                    .custom-day-picker .rdp-table,
+                    .custom-day-picker .rdp-month_grid {
+                      width: 100%;
                     }
                     .custom-day-picker .rdp-caption {
                       font-size: 0.875rem;
@@ -264,24 +289,26 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
                     opacity: 0.5;
                   }
                 `}</style>
-                <DayPicker
-                  mode="range"
-                  selected={range}
-                  onSelect={setRange}
-                  locale={dateLocale}
-                  disabled={[
-                    { before: new Date() },
-                    ...disabledDates
-                  ]}
-                  modifiers={{
-                    booked: disabledDates
-                  }}
-                  modifiersClassNames={{
-                    booked: 'booked-date'
-                  }}
-                  numberOfMonths={typeof window !== 'undefined' && window.innerWidth < 1024 ? 1 : 2}
-                  className="custom-day-picker"
-                />
+                <div className="w-full flex justify-center">
+                  <DayPicker
+                    mode="range"
+                    selected={range}
+                    onSelect={setRange}
+                    locale={dateLocale}
+                    disabled={[
+                      { before: new Date() },
+                      ...disabledDates
+                    ]}
+                    modifiers={{
+                      booked: disabledDates
+                    }}
+                    modifiersClassNames={{
+                      booked: 'booked-date'
+                    }}
+                    numberOfMonths={isMobile ? 1 : 2}
+                    className="custom-day-picker"
+                  />
+                </div>
               </div>
               {availabilityError && (
                 <div className="flex items-start gap-2 p-2 sm:p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -292,7 +319,7 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
               <p className="text-[10px] sm:text-xs text-gray-500 flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <span className="inline-flex items-center gap-1">
                   <span className="inline-block w-2.5 h-2.5 sm:w-3 sm:h-3 bg-red-100 border border-red-300 rounded"></span>
-                  <span>No inventory</span>
+                  <span>{t("booking.noInventory")}</span>
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <span className="inline-block w-2.5 h-2.5 sm:w-3 sm:h-3 bg-[rgb(31,219,206)] rounded"></span>
@@ -337,7 +364,7 @@ export function TimeBookingDialog({ product, open, onOpenChange, onConfirm }: Ti
                   </div>
                   <Separator />
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold text-xs sm:text-sm">Total</span>
+                    <span className="font-semibold text-xs sm:text-sm">{t("booking.total")}</span>
                     <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
                       €{totalPrice.toFixed(2)}
                     </span>

@@ -14,6 +14,7 @@ import { CreditCard, ArrowLeft, Lock } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { getSettings, type AppSettings } from "@/lib/settings"
 import { calculateSubtotal, calculateTaxTotal } from "@/lib/cart-pricing"
+import { useI18n } from "@/contexts/i18n-context"
 
 interface CustomerInfo {
   firstName: string
@@ -35,6 +36,7 @@ interface PaymentFormProps {
 export function PaymentForm({ customerInfo, onBack }: PaymentFormProps) {
   const { items, clearCart, deliveryFee } = useCart()
   const router = useRouter()
+  const { t } = useI18n()
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<"card" | "ideal" | "paypal">("card")
   const [processing, setProcessing] = useState(false)
@@ -91,13 +93,13 @@ export function PaymentForm({ customerInfo, onBack }: PaymentFormProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CreditCard className="h-5 w-5" />
-          Payment Information
+          {t("checkout.paymentInformation")}
         </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handlePayment} className="space-y-6">
           <div className="space-y-4">
-            <Label>Payment Method</Label>
+            <Label>{t("checkout.paymentMethod")}</Label>
             <div className="grid grid-cols-3 gap-3">
               <Button
                 type="button"
@@ -106,7 +108,7 @@ export function PaymentForm({ customerInfo, onBack }: PaymentFormProps) {
                 className="h-12"
               >
                 <CreditCard className="h-4 w-4 mr-2" />
-                Card
+                {t("checkout.card")}
               </Button>
               <Button
                 type="button"
@@ -130,7 +132,7 @@ export function PaymentForm({ customerInfo, onBack }: PaymentFormProps) {
           {paymentMethod === "card" && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="cardName">Cardholder Name</Label>
+                <Label htmlFor="cardName">{t("checkout.cardholderName")}</Label>
                 <Input
                   id="cardName"
                   value={cardInfo.name}
@@ -141,7 +143,7 @@ export function PaymentForm({ customerInfo, onBack }: PaymentFormProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="cardNumber">Card Number</Label>
+                <Label htmlFor="cardNumber">{t("checkout.cardNumber")}</Label>
                 <Input
                   id="cardNumber"
                   value={cardInfo.number}
@@ -153,7 +155,7 @@ export function PaymentForm({ customerInfo, onBack }: PaymentFormProps) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="expiry">Expiry Date</Label>
+                  <Label htmlFor="expiry">{t("checkout.expiryDate")}</Label>
                   <Input
                     id="expiry"
                     value={cardInfo.expiry}
@@ -178,10 +180,10 @@ export function PaymentForm({ customerInfo, onBack }: PaymentFormProps) {
 
           {paymentMethod === "ideal" && (
             <div className="space-y-2">
-              <Label>Select Your Bank</Label>
+              <Label>{t("checkout.selectBank")}</Label>
               <Select>
                 <SelectTrigger>
-                  <SelectValue placeholder="Choose your bank" />
+                  <SelectValue placeholder={t("checkout.chooseBank")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ing">ING Bank</SelectItem>
@@ -196,13 +198,13 @@ export function PaymentForm({ customerInfo, onBack }: PaymentFormProps) {
           <div className="flex items-center space-x-2">
             <Checkbox id="terms" checked={acceptTerms} onCheckedChange={setAcceptTerms} />
             <Label htmlFor="terms" className="text-sm">
-              I accept the{" "}
+              {t("checkout.acceptTerms")} {" "}
               <a href="#" className="text-primary hover:underline">
-                Terms of Service
+                {t("checkout.termsOfService")}
               </a>{" "}
-              and{" "}
+              {t("checkout.and")} {" "}
               <a href="#" className="text-primary hover:underline">
-                Privacy Policy
+                {t("checkout.privacyPolicy")}
               </a>
             </Label>
           </div>
@@ -210,18 +212,18 @@ export function PaymentForm({ customerInfo, onBack }: PaymentFormProps) {
           <div className="flex gap-4">
             <Button type="button" variant="outline" onClick={onBack} className="flex-1 bg-transparent">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
+              {t("checkout.back")}
             </Button>
             <Button type="submit" disabled={!acceptTerms || processing} className="flex-1">
               {processing ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  Processing...
+                  {t("checkout.processing")}
                 </>
               ) : (
                 <>
                   <Lock className="h-4 w-4 mr-2" />
-                  Complete Order €{totalAmount.toFixed(2)}
+                  {t("checkout.completeOrder")} €{totalAmount.toFixed(2)}
                 </>
               )}
             </Button>
@@ -229,7 +231,7 @@ export function PaymentForm({ customerInfo, onBack }: PaymentFormProps) {
 
           <div className="text-xs text-muted-foreground text-center">
             <Lock className="h-3 w-3 inline mr-1" />
-            Your payment information is secure and encrypted
+            {t("checkout.secure")}
           </div>
         </form>
       </CardContent>

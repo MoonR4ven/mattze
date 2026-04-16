@@ -99,7 +99,7 @@ export function CartSidebar() {
                         </Button>
                       </div>
 
-                      {item.selectedDate && item.selectedTime && (
+                      {item.selectedDate && (item.startTime || item.selectedTime) && (
                         <div className="mt-2 space-y-1">
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Calendar className="h-3 w-3" />
@@ -107,7 +107,11 @@ export function CartSidebar() {
                           </div>
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Clock className="h-3 w-3" />
-                            <span>{item.selectedTime}</span>
+                            <span>
+                              {(item.startTime || item.selectedTime)}
+                              {item.endTime ? ` - ${item.endTime}` : ""}
+                              {(Number(item.endDayOffset) || 0) > 0 ? " (+1 day)" : ""}
+                            </span>
                           </div>
                         </div>
                       )}

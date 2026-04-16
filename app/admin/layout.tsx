@@ -7,8 +7,7 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { LayoutDashboard, Package, Calendar, Settings, Menu, X, LogOut } from "lucide-react"
+import { LayoutDashboard, Package, Calendar, Settings, Menu, X, LogOut, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
 import { useI18n } from "@/contexts/i18n-context"
@@ -33,6 +32,11 @@ const navigation = [
     nameKey: "admin.settingsManagement",
     href: "/admin/settings",
     icon: Settings,
+  },
+  {
+    nameKey: "nav.contact",
+    href: "/admin/contact",
+    icon: User,
   },
 ]
 

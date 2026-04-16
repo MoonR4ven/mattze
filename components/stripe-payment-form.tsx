@@ -33,9 +33,24 @@ interface StripePaymentFormProps {
   onBack: () => void
 }
 
+function getLocalizedPaymentError(message: string | undefined, t: (key: string) => string): string {
+  if (!message) return t("checkout.paymentFailed")
+
+  const normalized = message.toLowerCase()
+  if (normalized.includes("used a known test card")) {
+    return t("checkout.paymentKnownTestCard")
+  }
+  if (normalized.includes("card was declined")) {
+    return t("checkout.cardDeclined")
+  }
+
+  return message
+}
+
 function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
   const stripe = useStripe()
   const elements = useElements()
+  const { t } = useI18n()
   const { items, clearCart, deliveryFee, fulfillmentOption, deliveryDistanceKm, pickupLocations } = useCart()
   const router = useRouter()
   const [settings, setSettings] = useState<AppSettings | null>(null)
@@ -74,7 +89,7 @@ function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
       })
 
       if (stripeError) {
-        setError(stripeError.message || "Payment failed")
+        setError(getLocalizedPaymentError(stripeError.message, t))
       } else if (paymentIntent && paymentIntent.status === "succeeded") {
         // Payment succeeded - call confirm-payment to sync to Billbee/Calendar
         try {
@@ -110,22 +125,19 @@ function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
             clearCart()
             router.push("/checkout/success")
           } else {
-            setError("Payment processed but order confirmation failed")
+            setError(t("checkout.orderConfirmationFailed"))
           }
         } catch (err) {
-          setError("Payment processed but order confirmation failed")
+          setError(t("checkout.orderConfirmationFailed"))
           console.error("Order confirmation failed:", err)
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Payment failed")
+      const fallbackMessage = err instanceof Error ? err.message : undefined
+      setError(getLocalizedPaymentError(fallbackMessage, t))
     } finally {
       setProcessing(false)
     }
-  }
-
-  const cardElementOptions = {
-    layout: "tabs",
   }
 
   return (
@@ -133,7 +145,7 @@ function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CreditCard className="h-5 w-5" />
-          Payment Information
+          {t("checkout.paymentInformation")}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -146,16 +158,16 @@ function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
           )}
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Card Details</label>
+            <label className="text-sm font-medium">{t("checkout.cardDetails")}</label>
             <PaymentElement />
           </div>
 
           <div className="text-xs text-muted-foreground">
             <div className="flex items-center gap-1 mb-2">
               <Lock className="h-3 w-3" />
-              <span>Your payment information is secure and encrypted</span>
+              <span>{t("checkout.secure")}</span>
             </div>
-            <p>We accept Visa, Mastercard, American Express, and other major cards.</p>
+            <p>{t("checkout.acceptedCards")}</p>
           </div>
 
           <div className="flex gap-4">
@@ -166,18 +178,18 @@ function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
               className="flex-1 bg-transparent"
               disabled={processing}
             >
-              Back
+              {t("checkout.back")}
             </Button>
             <Button type="submit" className="flex-1 bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 text-[rgb(var(--mavi-dark-teal))] font-semibold hover:text-black shadow-lg transition-all" disabled={!stripe || processing}>
               {processing ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
-                  Processing...
+                  {t("checkout.processing")}
                 </>
               ) : (
                 <>
                   <Lock className="h-4 w-4 mr-2" />
-                  Pay €{totalAmount.toFixed(2)}
+                  {t("checkout.pay")} €{totalAmount.toFixed(2)}
                 </>
               )}
             </Button>
@@ -190,7 +202,7 @@ function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
 
 export function StripePaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
   const { items, deliveryFee, fulfillmentOption, deliveryDistanceKm, pickupLocations } = useCart()
-  const { locale } = useI18n()
+  const { locale, t } = useI18n()
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -239,19 +251,32 @@ export function StripePaymentForm({ customerInfo, onBack }: StripePaymentFormPro
         const { clientSecret: secret, error: err } = await response.json()
 
         if (!response.ok || err) {
-          throw new Error(err || "Failed to create payment intent")
+          throw new Error(err || t("checkout.paymentInitFailed"))
         }
 
         setClientSecret(secret)
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to initialize payment")
+        setError(err instanceof Error ? err.message : t("checkout.paymentInitFailed"))
       } finally {
         setLoading(false)
       }
     }
 
     createPaymentIntent()
-  }, [items, customerInfo, totalAmount, fulfillmentOption, deliveryDistanceKm, deliveryTotal, pickupLocations, locale])
+  }, [
+    items,
+    customerInfo,
+    totalAmount,
+    fulfillmentOption,
+    deliveryDistanceKm,
+    deliveryTotal,
+    pickupLocations,
+    locale,
+    subtotal,
+    tax,
+    vatRate,
+    t,
+  ])
 
   if (loading) {
     return (

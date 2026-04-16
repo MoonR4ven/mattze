@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Calendar, Euro, Package, CheckCircle2, Info, ArrowLeft, Sparkles, ChevronLeft, ChevronRight } from "lucide-react"
+import { Calendar, Euro, CheckCircle2, Info, ArrowLeft, Sparkles, ChevronLeft, ChevronRight } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useCart } from "@/hooks/use-cart"
@@ -56,6 +56,9 @@ export default function ProductDetailPage() {
     const safeDays = days || 1
     const pricePerDay = getPricePerDay(product, safeDays)
     const totalPrice = pricePerDay * safeDays
+    const bookingStartTime = product.bookingStartTime || "10:00"
+    const bookingEndTime = product.bookingEndTime || "11:00"
+    const bookingEndDayOffset = product.bookingEndDayOffset ?? 0
 
     addToCart({
       ...product,
@@ -68,7 +71,10 @@ export default function ProductDetailPage() {
       numberOfDays: days,
       totalPrice,
       selectedDate: startDate,
-      selectedTime: undefined,
+      selectedTime: bookingStartTime,
+      startTime: bookingStartTime,
+      endTime: bookingEndTime,
+      endDayOffset: bookingEndDayOffset,
     })
     setShowBookingDialog(false)
     router.push('/cart')
@@ -328,10 +334,6 @@ export default function ProductDetailPage() {
                   <Separator />
 
                   <div className="space-y-2 sm:space-y-3">
-                    <div className="flex items-center gap-2 text-xs sm:text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-[rgb(var(--mavi-turquoise))] flex-shrink-0" />
-                      <span>{t("productDetail.freeCancellation")}</span>
-                    </div>
                     <div className="flex items-center gap-2 text-xs sm:text-sm">
                       <CheckCircle2 className="h-4 w-4 text-[rgb(var(--mavi-turquoise))] flex-shrink-0" />
                       <span>{t("productDetail.instantConfirmation")}</span>

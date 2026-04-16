@@ -6,6 +6,7 @@ import { getProducts, addProduct, updateProduct, deleteProduct } from "@/lib/pro
 import { getCategories } from "@/lib/categories"
 import type { Product } from "@/lib/types"
 import type { Category } from "@/lib/categories"
+import { getSettings, type AppSettings } from "@/lib/settings"
 import { useI18n } from "@/contexts/i18n-context"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -47,6 +48,7 @@ interface ProductFormData {
   name: string
   description: string
   type: string
+  category: string
   price: number
   taxRate: number
   pricingTiers: Array<{ minDays: number; pricePerDay: number }>
@@ -58,12 +60,17 @@ interface ProductFormData {
   capacity: string
   specifications: Record<string, string>
   features: string[]
+  pickupLocationIds: string[]
+  bookingStartTime: string
+  bookingEndTime: string
+  bookingEndDayOffset: number
 }
 
 const initialFormData: ProductFormData = {
   name: "",
   description: "",
   type: "",
+  category: "",
   price: 0,
   taxRate: 21,
   pricingTiers: [],
@@ -75,6 +82,10 @@ const initialFormData: ProductFormData = {
   capacity: "",
   specifications: {},
   features: [],
+  pickupLocationIds: [],
+  bookingStartTime: "10:00",
+  bookingEndTime: "11:00",
+  bookingEndDayOffset: 0,
 }
 
 const PLACEHOLDER_IMAGE = "/placeholder.svg?height=400&width=600&text=No+Image+Selected"
@@ -82,6 +93,7 @@ const PLACEHOLDER_IMAGE = "/placeholder.svg?height=400&width=600&text=No+Image+S
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [settings, setSettings] = useState<AppSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [formData, setFormData] = useState<ProductFormData>(initialFormData)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -102,9 +114,10 @@ export default function AdminProductsPage() {
 
   const fetchData = async () => {
     try {
-      const [productsData, categoriesData] = await Promise.all([getProducts(), getCategories()])
+      const [productsData, categoriesData, settingsData] = await Promise.all([getProducts(), getCategories(), getSettings()])
       setProducts(productsData)
       setCategories(categoriesData)
+      setSettings(settingsData)
     } catch (error) {
       console.error("Error fetching data:", error)
       toast.error("Failed to load products and categories")
@@ -114,6 +127,17 @@ export default function AdminProductsPage() {
   }
 
   const getCategoryNames = (): string[] => categories.map((cat) => cat.name)
+
+  const getStorefrontCategoryOptions = (): string[] => {
+    const fromSettings = categories.map((cat) => cat.name)
+    const fromProducts = products
+      .map((product) => (product.category || product.type || "").trim())
+      .filter(Boolean)
+
+    return Array.from(new Set([...fromSettings, ...fromProducts])).sort((a, b) =>
+      a.localeCompare(b, undefined, { sensitivity: "base" }),
+    )
+  }
 
   const resetForm = () => {
     setFormData(initialFormData)
@@ -133,8 +157,10 @@ export default function AdminProductsPage() {
     try {
       const dataToSave = {
         ...formData,
+        category: (formData.category || formData.type || "").trim(),
         price: Number(formData.price) || 0,
         taxRate: Number(formData.taxRate) || 0,
+        bookingEndDayOffset: Number(formData.bookingEndDayOffset) || 0,
         pricingTiers: (formData.pricingTiers || []).filter((tier) => tier.minDays > 0 && tier.pricePerDay >= 0),
       }
 
@@ -182,6 +208,7 @@ export default function AdminProductsPage() {
       name: product.name,
       description: product.description || "",
       type: product.type || "",
+      category: product.category || product.type || "",
       price: product.price ?? 0,
       taxRate: product.taxRate ?? 21,
       pricingTiers: product.pricingTiers || [],
@@ -193,6 +220,10 @@ export default function AdminProductsPage() {
       capacity: product.capacity || "",
       specifications: cleanedSpecs,
       features: product.features || [],
+      pickupLocationIds: product.pickupLocationIds || [],
+      bookingStartTime: product.bookingStartTime || "10:00",
+      bookingEndTime: product.bookingEndTime || "11:00",
+      bookingEndDayOffset: product.bookingEndDayOffset ?? 0,
     })
     setIsDialogOpen(true)
   }
@@ -329,7 +360,8 @@ export default function AdminProductsPage() {
     (product) =>
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (product.description ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (product.type ?? "").toLowerCase().includes(searchQuery.toLowerCase())
+      (product.type ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (product.category ?? "").toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   if (loading) {
@@ -417,7 +449,7 @@ export default function AdminProductsPage() {
 
                           <div className="space-y-2">
                             <Label htmlFor="type" className="text-sm font-medium">
-                              {t("admin.category")}
+                              {t("admin.category")} (Type)
                             </Label>
                             <Select 
                               value={formData.type} 
@@ -430,6 +462,33 @@ export default function AdminProductsPage() {
                                 {getCategoryNames().map((type) => (
                                   <SelectItem key={type} value={type}>
                                     {type}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="category" className="text-sm font-medium">
+                              Storefront category
+                            </Label>
+                            <Select
+                              value={formData.category || "__none"}
+                              onValueChange={(value) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  category: value === "__none" ? "" : value,
+                                }))
+                              }
+                            >
+                              <SelectTrigger id="category" className="h-11">
+                                <SelectValue placeholder="Choose category for product filtering" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none">Use product type</SelectItem>
+                                {getStorefrontCategoryOptions().map((category) => (
+                                  <SelectItem key={category} value={category}>
+                                    {category}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -550,6 +609,95 @@ export default function AdminProductsPage() {
                             />
                             <p className="text-xs text-muted-foreground">
                               {t("admin.taxRateDescription")}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium">Booking Time Window</Label>
+                          <div className="rounded-lg border bg-gray-50 p-3">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <div className="space-y-2">
+                                <Label htmlFor="bookingStartTime" className="text-xs">Start time</Label>
+                                <Input
+                                  id="bookingStartTime"
+                                  type="time"
+                                  value={formData.bookingStartTime}
+                                  onChange={(e) => setFormData(prev => ({ ...prev, bookingStartTime: e.target.value || "00:00" }))}
+                                  className="h-10"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="bookingEndTime" className="text-xs">End time</Label>
+                                <Input
+                                  id="bookingEndTime"
+                                  type="time"
+                                  value={formData.bookingEndTime}
+                                  onChange={(e) => setFormData(prev => ({ ...prev, bookingEndTime: e.target.value || "23:59" }))}
+                                  className="h-10"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="bookingEndDayOffset" className="text-xs">End day</Label>
+                                <Select
+                                  value={String(formData.bookingEndDayOffset)}
+                                  onValueChange={(value) => setFormData(prev => ({ ...prev, bookingEndDayOffset: Number(value) || 0 }))}
+                                >
+                                  <SelectTrigger id="bookingEndDayOffset" className="h-10">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="0">Same day</SelectItem>
+                                    <SelectItem value="1">Next day</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              Example: Bouncy castle 06:00-20:00 (same day) or standing table 12:00-11:30 (next day).
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium">Allowed Pickup Locations</Label>
+                          <div className="rounded-lg border bg-gray-50 p-3 space-y-2">
+                            {settings?.pickupLocations?.length ? (
+                              <div className="grid gap-2">
+                                {settings.pickupLocations.map((location) => {
+                                  const selected = formData.pickupLocationIds.includes(location.id)
+                                  return (
+                                    <label key={location.id} className="flex items-start gap-2 rounded-lg border bg-[#d9d9d9] p-2 text-xs">
+                                      <input
+                                        type="checkbox"
+                                        checked={selected}
+                                        onChange={(e) => {
+                                          if (e.target.checked) {
+                                            setFormData(prev => ({
+                                              ...prev,
+                                              pickupLocationIds: [...prev.pickupLocationIds, location.id],
+                                            }))
+                                          } else {
+                                            setFormData(prev => ({
+                                              ...prev,
+                                              pickupLocationIds: prev.pickupLocationIds.filter((id) => id !== location.id),
+                                            }))
+                                          }
+                                        }}
+                                      />
+                                      <span>
+                                        <span className="font-semibold">{location.name}</span>
+                                        <span className="block text-muted-foreground">{location.address}</span>
+                                      </span>
+                                    </label>
+                                  )
+                                })}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">No global pickup locations configured yet. Add them in Admin Settings first.</p>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              Leave all unchecked to allow this product at any pickup location.
                             </p>
                           </div>
                         </div>
@@ -948,12 +1096,14 @@ export default function AdminProductsPage() {
                     </span>
                     <span className="text-xs text-muted-foreground">/day</span>
                   </div>
-                  <Badge
-                    variant="secondary"
-                    className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 border-[rgb(var(--mavi-blue))]/20 text-xs"
-                  >
-                    {product.type}
-                  </Badge>
+                  <div className="flex items-center gap-1.5">
+                    <Badge
+                      variant="secondary"
+                      className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 border-[rgb(var(--mavi-blue))]/20 text-xs"
+                    >
+                      {product.category || product.type}
+                    </Badge>
+                  </div>
                 </div>
 
                 <div className="flex gap-2.5 pt-3">
@@ -981,7 +1131,7 @@ export default function AdminProductsPage() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>{t("admin.deleteProduct")}</AlertDialogTitle>
                         <AlertDialogDescription>
-                          {t("admin.deleteConfirmation")} "{product.name}"? {t("admin.cannotBeUndone")}
+                          {t("admin.deleteConfirmation")} &quot;{product.name}&quot;? {t("admin.cannotBeUndone")}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>

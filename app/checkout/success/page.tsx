@@ -1,7 +1,8 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
-import { CheckCircle, Calendar, Mail, Phone, Package, Clock, AlertCircle, MapPin, User, DollarSign, Zap, Download, ExternalLink } from "lucide-react"
+import { CheckCircle, Calendar, Mail, Phone, Package, Clock, AlertCircle, Zap, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -11,26 +12,133 @@ import { useI18n } from "@/contexts/i18n-context"
 import Link from "next/link"
 import { format } from "date-fns"
 import Image from "next/image"
+import { getSettings, type AppSettings } from "@/lib/settings"
+
+type FulfillmentOption = "self-collection" | "delivery-collection" | "delivery-assembly"
+
+interface PickupLocation {
+  id: string
+  name: string
+  address: string
+}
+
+interface OrderCustomerInfo {
+  firstName?: string
+  lastName?: string
+  email?: string
+  phone?: string
+  address?: string
+  city?: string
+  postalCode?: string
+  country?: string
+}
+
+interface OrderItem {
+  id?: string
+  name: string
+  type?: string
+  image?: string
+  price?: number
+  quantity?: number
+  totalPrice?: number
+  numberOfDays?: number
+  startDate?: string
+  endDate?: string
+  selectedDate?: string
+  selectedTime?: string
+  startTime?: string
+  endTime?: string
+  endDayOffset?: number
+}
+
+interface LastOrderData {
+  items: OrderItem[]
+  customerInfo?: OrderCustomerInfo
+  fulfillmentOption?: FulfillmentOption
+  pickupLocations?: PickupLocation[]
+  deliveryFee?: number
+  pricing?: {
+    tax?: number
+  }
+}
 
 export default function CheckoutSuccessPage() {
   const { t, locale } = useI18n()
   const searchParams = useSearchParams()
+  const [settings, setSettings] = useState<AppSettings | null>(null)
   const paymentIntentId = searchParams.get("payment_intent")
+
+  const getLastOrderData = (): LastOrderData => {
+    if (typeof window === "undefined") {
+      return { items: [] }
+    }
+
+    try {
+      const raw = window.sessionStorage.getItem("lastOrder")
+      if (!raw) {
+        return { items: [] }
+      }
+
+      const parsed = JSON.parse(raw) as Partial<LastOrderData>
+      return {
+        items: Array.isArray(parsed.items) ? parsed.items : [],
+        customerInfo: parsed.customerInfo,
+        fulfillmentOption: parsed.fulfillmentOption,
+        pickupLocations: Array.isArray(parsed.pickupLocations) ? parsed.pickupLocations : [],
+        deliveryFee: parsed.deliveryFee,
+        pricing: parsed.pricing,
+      }
+    } catch {
+      return { items: [] }
+    }
+  }
   
   // Try to get order data from sessionStorage (passed from checkout)
-  const orderData = typeof window !== "undefined" ? JSON.parse(sessionStorage.getItem("lastOrder") || "{}") : {}
+  const orderData = getLastOrderData()
   
-  // Calculate totals if we have order data
-  const subtotal = orderData.items?.reduce((sum: number, item: any) => sum + (item.totalPrice || 0), 0) || 0
-  const tax = orderData.pricing?.tax ?? 0
-  const deliveryFee = orderData.deliveryFee ?? 0
-  const total = subtotal + tax + deliveryFee
+  useEffect(() => {
+    getSettings().then(setSettings).catch(() => setSettings(null))
+  }, [])
 
   // Generate calendar links for items
-  const generateCalendarLinks = (item: any) => {
+  const generateCalendarLinks = (item: OrderItem) => {
     const startDate = item.startDate || item.selectedDate
-    const endDate = item.endDate || item.selectedDate
     const startTime = item.startTime || item.selectedTime || "00:00"
+    const baseEndDate = item.endDate || item.selectedDate || startDate
+    const endDayOffset = Number.isFinite(Number(item.endDayOffset)) ? Number(item.endDayOffset) : 0
+    const endTime = item.endTime || (() => {
+      const [h, m] = startTime.split(":").map(Number)
+      return `${String(((Number.isFinite(h) ? h : 10) + 1) % 24).padStart(2, "0")}:${String(Number.isFinite(m) ? m : 0).padStart(2, "0")}`
+    })()
+
+    const addDaysToDateString = (dateString: string, days: number): string => {
+      const [y, m, d] = dateString.split("-").map(Number)
+      const date = new Date(y, m - 1, d)
+      date.setDate(date.getDate() + days)
+      return format(date, "yyyy-MM-dd")
+    }
+
+    const getFulfillmentLocation = () => {
+      if (orderData.fulfillmentOption === "self-collection") {
+        if (Array.isArray(orderData.pickupLocations) && orderData.pickupLocations.length > 0) {
+          return orderData.pickupLocations.map((location) => `${location.name} (${location.address})`).join(" | ")
+        }
+        return t("success.selfCollection")
+      }
+
+      const customer = orderData.customerInfo || {}
+      const destination = [customer.address, customer.postalCode, customer.city, customer.country].filter(Boolean).join(" ")
+      if (orderData.fulfillmentOption === "delivery-assembly") {
+        return destination ? `${t("success.deliveryAssembly")}: ${destination}` : t("success.deliveryAssembly")
+      }
+      if (orderData.fulfillmentOption === "delivery-collection") {
+        return destination ? `${t("success.deliveryCollection")}: ${destination}` : t("success.deliveryCollection")
+      }
+      return destination || t("success.deliveryPickup")
+    }
+
+    const endDate = baseEndDate ? addDaysToDateString(baseEndDate, endDayOffset) : undefined
+    const location = getFulfillmentLocation()
     
     if (!startDate || !endDate) return null
 
@@ -38,12 +146,10 @@ export default function CheckoutSuccessPage() {
     const [hours, minutes] = startTime.split(":")
     const startDateTime = new Date(`${year}-${month}-${day}T${hours}:${minutes}:00`)
     
-    let endDateTime: Date
-    if (startDate === endDate) {
+    let endDateTime = new Date(`${endDate}T${endTime}:00`)
+    if (endDateTime <= startDateTime) {
       endDateTime = new Date(startDateTime)
       endDateTime.setHours(endDateTime.getHours() + 1)
-    } else {
-      endDateTime = new Date(endDate + "T" + startTime)
     }
 
     const formatCalendarDate = (date: Date): string => {
@@ -64,20 +170,20 @@ export default function CheckoutSuccessPage() {
 
     const title = locale === "de" ? `Mietdauer: ${item.name}` : `Rental: ${item.name}`
     const description = locale === "de" 
-      ? `Mietdauer für ${item.name}. Bei Fragen kontaktieren Sie uns gerne.`
-      : `Rental period for ${item.name}. Please contact us if you have any questions.`
+      ? `Mietdauer für ${item.name}. Ort: ${location}. Bei Fragen kontaktieren Sie uns gerne.`
+      : `Rental period for ${item.name}. Location: ${location}. Please contact us if you have any questions.`
 
     const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
       title
     )}&dates=${startFormatted}/${endFormatted}&details=${encodeURIComponent(
       description
-    )}&location=MaVi%20Rental&sf=true&output=xml`
+    )}&location=${encodeURIComponent(location)}&sf=true&output=xml`
 
     const outlookUrl = `https://outlook.office.com/calendar/0/deeplink/compose?subject=${encodeURIComponent(
       title
     )}&startdt=${startDateTime.toISOString()}&enddt=${endDateTime.toISOString()}&body=${encodeURIComponent(
       description
-    )}&location=MaVi%20Rental`
+    )}&location=${encodeURIComponent(location)}`
 
     return { googleCalendarUrl, outlookUrl }
   }
@@ -93,10 +199,10 @@ export default function CheckoutSuccessPage() {
           </div>
         </div>
         <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
-          {t("success.orderConfirmed") || "Order Confirmed!"}
+          {t("success.orderConfirmed")}
         </h1>
         <p className="text-lg text-muted-foreground">
-          {t("success.thankYou") || "Thank you for your booking. Your payment has been processed successfully."}
+          {t("success.thankYou")}
         </p>
       </div>
 
@@ -104,7 +210,7 @@ export default function CheckoutSuccessPage() {
       {paymentIntentId && (
         <Card className="mb-6 bg-slate-100 border-2 border-[rgb(var(--mavi-blue))]/20">
           <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground mb-1">{t("success.orderReference") || "Order Reference"}</p>
+              <p className="text-sm text-muted-foreground mb-1">{t("success.orderReference")}</p>
             <p className="font-mono text-sm font-semibold break-all text-[rgb(var(--mavi-blue))]">{paymentIntentId}</p>
           </CardContent>
         </Card>
@@ -116,11 +222,11 @@ export default function CheckoutSuccessPage() {
           <CardHeader className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/5 to-[rgb(var(--mavi-turquoise))]/5 border-b-2">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Package className="h-5 w-5 text-[rgb(var(--mavi-blue))]" />
-              {t("success.rentalDetails") || "Rental Details"}
+              {t("success.rentalDetails")}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
-            {orderData.items.map((item: any, index: number) => (
+            {orderData.items.map((item: OrderItem, index: number) => (
               <div key={index}>
                 <div className="flex gap-4">
                   {item.image && (
@@ -158,13 +264,17 @@ export default function CheckoutSuccessPage() {
                         {item.numberOfDays && (
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Clock className="h-4 w-4 text-[rgb(var(--mavi-turquoise))]" />
-                            <span>{item.numberOfDays} {item.numberOfDays === 1 ? t("success.day") || "day" : t("success.days") || "days"}</span>
+                            <span>{item.numberOfDays} {item.numberOfDays === 1 ? t("success.day") : t("success.days")}</span>
                           </div>
                         )}
-                        {item.selectedTime && (
+                        {(item.startTime || item.selectedTime) && (
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Clock className="h-4 w-4 text-[rgb(var(--mavi-deep-teal))]" />
-                            <span>{item.selectedTime}</span>
+                            <span>
+                              {(item.startTime || item.selectedTime)}
+                              {item.endTime ? ` - ${item.endTime}` : ""}
+                              {(Number(item.endDayOffset) || 0) > 0 ? " (+1 day)" : ""}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -172,7 +282,7 @@ export default function CheckoutSuccessPage() {
 
                     {item.quantity > 1 && (
                       <div className="text-sm text-muted-foreground mt-2">
-                        {t("success.quantity") || "Quantity"}: {item.quantity}
+                        {t("success.quantity")}: {item.quantity}
                       </div>
                     )}
                   </div>
@@ -185,19 +295,19 @@ export default function CheckoutSuccessPage() {
       )}
 
       {/* Add to Calendar Section */}
-      {orderData.items && orderData.items.length > 0 && orderData.items.some((item: any) => item.startDate || item.selectedDate) && (
+      {orderData.items && orderData.items.length > 0 && orderData.items.some((item: OrderItem) => item.startDate || item.selectedDate) && (
         <Card className="mb-8 bg-slate-100 border-2 border-[rgb(var(--mavi-blue))]/20 overflow-hidden hover:border-[rgb(var(--mavi-blue))]/40 transition-all">
           <CardHeader className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/5 to-[rgb(var(--mavi-turquoise))]/5 border-b-2">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Calendar className="h-5 w-5 text-[rgb(var(--mavi-blue))]" />
-              {t("success.addToCalendar") || "Add to Your Calendar"}
+              {t("success.addToCalendar")}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
             <p className="text-sm text-muted-foreground">
-              {t("success.calendarDescription") || "Click below to add your rental dates to your calendar"}
+              {t("success.calendarDescription")}
             </p>
-            {orderData.items.map((item: any, index: number) => {
+            {orderData.items.map((item: OrderItem, index: number) => {
               const calendarLinks = generateCalendarLinks(item)
               if (!calendarLinks) return null
 
@@ -212,7 +322,7 @@ export default function CheckoutSuccessPage() {
                       onClick={() => window.open(calendarLinks.googleCalendarUrl, '_blank')}
                     >
                       <ExternalLink className="h-4 w-4 mr-2" />
-                      {locale === "de" ? "Google Kalender" : "Google Calendar"}
+                      {t("success.googleCalendar")}
                     </Button>
                     <Button
                       variant="outline"
@@ -236,14 +346,14 @@ export default function CheckoutSuccessPage() {
         <CardHeader className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/5 to-[rgb(var(--mavi-turquoise))]/5 border-b-2">
           <CardTitle className="flex items-center gap-2">
             <Zap className="h-5 w-5 text-[rgb(var(--mavi-blue))]" />
-            {t("success.whatHappensNext") || "What Happens Next?"}
+            {t("success.whatHappensNext")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 space-y-4">
           {[
-            { icon: "✓", color: "bg-green-500", title: t("success.step1Title") || "Payment Confirmed", desc: t("success.step1Desc") || "Your payment has been securely processed through Stripe and your order is being created." },
-            { icon: "2", color: "bg-purple-500", title: t("success.step2Title") || "Calendar Updated", desc: t("success.step2Desc") || "Your booking dates and times have been added to our calendar system for scheduling." },
-            { icon: "3", color: "bg-[rgb(var(--mavi-blue))]", title: t("success.step3Title") || "Confirmation Email", desc: t("success.step3Desc") || "You'll receive a confirmation email with your complete order details within 5 minutes." }
+            { icon: "✓", color: "bg-green-500", title: t("success.step1Title"), desc: t("success.step1Desc") },
+            { icon: "2", color: "bg-purple-500", title: t("success.step2Title"), desc: t("success.step2Desc") },
+            { icon: "3", color: "bg-[rgb(var(--mavi-blue))]", title: t("success.step3Title"), desc: t("success.step3Desc") }
           ].map((step, idx) => (
             <div key={idx} className="flex gap-4 group">
               <div className="flex flex-col items-center">
@@ -266,17 +376,20 @@ export default function CheckoutSuccessPage() {
         <CardHeader className="bg-gradient-to-r from-[rgb(var(--mavi-turquoise))]/5 to-[rgb(var(--mavi-blue))]/5 border-b-2">
           <CardTitle className="flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-[rgb(var(--mavi-turquoise))]" />
-            {t("success.needHelp") || "Need Help?"}
+            {t("success.needHelp")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 space-y-4">
           <div className="flex items-start gap-3 group">
             <Mail className="h-5 w-5 text-[rgb(var(--mavi-blue))] mt-0.5 flex-shrink-0 group-hover:scale-110 transition-transform" />
             <div>
-              <h3 className="font-medium">{t("success.emailSupport") || "Email Support"}</h3>
+              <h3 className="font-medium">{t("success.emailSupport")}</h3>
               <p className="text-sm text-muted-foreground">
-                {process.env.NEXT_PUBLIC_CONTACT_EMAIL || "contact@example.com"}
+                {settings?.sellerContact?.email || process.env.NEXT_PUBLIC_CONTACT_EMAIL || "contact@example.com"}
               </p>
+              {settings?.sellerContact?.companyName ? (
+                <p className="text-xs text-muted-foreground mt-1">{settings.sellerContact.companyName}</p>
+              ) : null}
             </div>
           </div>
 
@@ -285,9 +398,15 @@ export default function CheckoutSuccessPage() {
           <div className="flex items-start gap-3 group">
             <Phone className="h-5 w-5 text-[rgb(var(--mavi-turquoise))] mt-0.5 flex-shrink-0 group-hover:scale-110 transition-transform" />
             <div>
-              <h3 className="font-medium">{t("success.ourTeam") || "Our Team"}</h3>
-              <p className="text-sm text-muted-foreground">
-                {t("success.responseTime") || "We typically respond within 24 hours during business hours."}
+              <h3 className="font-medium">{t("success.ourTeam")}</h3>
+              {settings?.sellerContact?.phone ? (
+                <p className="text-sm text-muted-foreground">{settings.sellerContact.phone}</p>
+              ) : null}
+              {settings?.sellerContact?.address ? (
+                <p className="text-xs text-muted-foreground mt-1">{settings.sellerContact.address}</p>
+              ) : null}
+              <p className="text-sm text-muted-foreground mt-1">
+                {t("success.responseTime")}
               </p>
             </div>
           </div>
@@ -297,10 +416,10 @@ export default function CheckoutSuccessPage() {
       {/* Action Buttons */}
       <div className="flex gap-4 justify-center flex-wrap mb-8">
         <Button asChild variant="outline" size="lg" className="border-2 hover:border-[rgb(var(--mavi-blue))]/50">
-          <Link href="/">{t("success.backToHome") || "Back to Home"}</Link>
+          <Link href="/">{t("success.backToHome")}</Link>
         </Button>
         <Button asChild size="lg" className="bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] hover:opacity-90 text-[rgb(var(--mavi-dark-teal))] font-semibold hover:text-black">
-          <Link href="/products">{t("success.browseMore") || "Browse More Products"}</Link>
+          <Link href="/products">{t("success.browseMore")}</Link>
         </Button>
       </div>
 
@@ -308,7 +427,7 @@ export default function CheckoutSuccessPage() {
       <Alert className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/5 to-[rgb(var(--mavi-turquoise))]/5 border-2 border-[rgb(var(--mavi-blue))]/20">
         <AlertCircle className="h-4 w-4 text-[rgb(var(--mavi-blue))]" />
         <AlertDescription className="text-[rgb(var(--mavi-blue))] ml-2">
-          {t("success.emailSent") || "Your order information has been sent to your email. Check your inbox (and spam folder) for a confirmation email with all your booking details."}
+          {t("success.emailSent")}
         </AlertDescription>
       </Alert>
     </div>

@@ -1,42 +1,47 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { collection, getDocs, query, orderBy, limit } from "firebase/firestore"
+import { collection, getDocs, query, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { getProducts } from "@/lib/products"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Package, Calendar, Users, Euro, TrendingUp, Clock, AlertCircle, Sparkles, ArrowUpRight } from "lucide-react"
+import { Package, Calendar, Users, Euro, TrendingUp, Clock, AlertCircle, Sparkles, ArrowUpRight, User } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
 import { useI18n } from "@/contexts/i18n-context"
 
 // Helper to safely convert Firestore timestamp to Date
-const toDate = (value: any): Date => {
+const toDate = (value: unknown): Date => {
   if (!value) return new Date()
   try {
     // Firestore Timestamp has toDate() method
-    if (value.toDate && typeof value.toDate === 'function') return value.toDate()
+    if (typeof value === "object" && value !== null && "toDate" in value) {
+      const maybeTimestamp = value as { toDate?: () => Date }
+      if (typeof maybeTimestamp.toDate === "function") {
+        return maybeTimestamp.toDate()
+      }
+    }
     // String date
-    if (typeof value === 'string') return new Date(value)
+    if (typeof value === "string") return new Date(value)
     // Already a Date
     if (value instanceof Date) return value
     // Unix timestamp
-    if (typeof value === 'number') return new Date(value)
+    if (typeof value === "number") return new Date(value)
   } catch (e) {
-    console.error('Error converting date:', e)
+    console.error("Error converting date:", e)
   }
   return new Date()
 }
 
 // Safe format helper
-const safeFormat = (date: any, formatStr: string): string => {
+const safeFormat = (date: unknown, formatStr: string): string => {
   try {
     return format(toDate(date), formatStr)
   } catch (e) {
-    console.error('Error formatting date:', e)
-    return 'Invalid date'
+    console.error("Error formatting date:", e)
+    return "Invalid date"
   }
 }
 
@@ -54,6 +59,7 @@ interface RecentBooking {
   productName: string
   customerName: string
   date: string
+  createdAt?: unknown
   status: string
   price: number
 }
@@ -349,6 +355,19 @@ export default function AdminDashboard() {
                     <Link href="/admin/customers">
                       <Users className="h-4 w-4 mr-2" />
                       {t("admin.customerManagement")}
+                    </Link>
+                  </Button>
+                </div>
+
+                <div suppressHydrationWarning>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="w-full justify-start hover:bg-[rgb(var(--mavi-blue))]/10 hover:text-[rgb(var(--mavi-blue))] hover:border-[rgb(var(--mavi-blue))] hover:scale-105 transition-all duration-200"
+                  >
+                    <Link href="/admin/contact">
+                      <User className="h-4 w-4 mr-2" />
+                      Edit Seller Contact
                     </Link>
                   </Button>
                 </div>

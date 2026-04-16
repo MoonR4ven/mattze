@@ -60,6 +60,58 @@ export async function POST(request: NextRequest) {
       const deliveryInfo = tempOrderData.deliveryInfo || null
       const pricing = tempOrderData.pricing || null
 
+      const addDaysToDateString = (dateString: string, days: number): string => {
+        const [year, month, day] = dateString.split("-").map(Number)
+        const date = new Date(year, month - 1, day)
+        date.setDate(date.getDate() + days)
+        const yyyy = date.getFullYear()
+        const mm = String(date.getMonth() + 1).padStart(2, "0")
+        const dd = String(date.getDate()).padStart(2, "0")
+        return `${yyyy}-${mm}-${dd}`
+      }
+
+      const deriveDefaultEndTime = (startTime: string): string => {
+        const [hours, minutes] = startTime.split(":").map(Number)
+        const endHours = (Number.isFinite(hours) ? hours : 10) + 1
+        const endMinutes = Number.isFinite(minutes) ? minutes : 0
+        return `${String(endHours % 24).padStart(2, "0")}:${String(endMinutes).padStart(2, "0")}`
+      }
+
+      const getFulfillmentLocation = (customerInfo: {
+        address?: string
+        postalCode?: string
+        city?: string
+        country?: string
+      }): string => {
+        const option = deliveryInfo?.fulfillmentOption
+        if (option === "self-collection") {
+          const locations: Array<{ name?: string; address?: string }> = Array.isArray(deliveryInfo?.pickupLocations)
+            ? deliveryInfo.pickupLocations
+            : []
+          if (locations.length > 0) {
+            return `Self-collection: ${locations.map((loc) => `${loc.name || "Pickup"} (${loc.address || ""})`).join(" | ")}`
+          }
+          return "Self-collection"
+        }
+
+        const addressParts = [
+          customerInfo.address,
+          customerInfo.postalCode,
+          customerInfo.city,
+          customerInfo.country,
+        ].filter(Boolean)
+        const destination = addressParts.join(" ")
+
+        if (option === "delivery-assembly") {
+          return destination ? `Delivery + setup: ${destination}` : "Delivery + setup"
+        }
+        if (option === "delivery-collection") {
+          return destination ? `Delivery + collection: ${destination}` : "Delivery + collection"
+        }
+
+        return destination || "Delivery/Pickup"
+      }
+
       // Create order in Firebase using Admin SDK
       const orderData = {
         paymentIntentId: paymentIntent.id,
@@ -104,22 +156,34 @@ export async function POST(request: NextRequest) {
 
       const calendarAPI = new GoogleCalendarAPI()
       const calendarId = process.env.GOOGLE_CALENDAR_ID || "primary"
+      const fulfillmentLocation = getFulfillmentLocation(orderData.customerInfo)
 
       for (const item of orderItems) {
-        if (item.selectedDate && item.selectedTime) {
-          const endTime = String(Number.parseInt(item.selectedTime.split(":")[0]) + 1).padStart(2, "0") + ":00"
+        const startDate = item.startDate || item.selectedDate
+        if (startDate) {
+          const baseEndDate = item.endDate || item.selectedDate || startDate
+          const startTime = item.startTime || item.selectedTime || "10:00"
+          const endTime = item.endTime || deriveDefaultEndTime(startTime)
+          const endDayOffset = Number.isFinite(Number(item.endDayOffset)) ? Number(item.endDayOffset) : 0
+          const endDate = addDaysToDateString(baseEndDate, endDayOffset)
 
           const bookingData = {
             orderId: orderId,
             productId: item.id,
             productName: item.name,
-            date: item.selectedDate,
-            startTime: item.selectedTime,
+            date: startDate,
+            startDate,
+            endDate,
+            startTime,
             endTime: endTime,
+            endDayOffset,
             customerEmail: paymentIntent.metadata.customerEmail,
             customerName: paymentIntent.metadata.customerName,
             status: "confirmed",
             price: item.totalPrice ?? item.price * item.quantity * ((item.numberOfDays as number) || 1),
+            quantity: item.quantity || 1,
+            location: fulfillmentLocation,
+            fulfillmentOption: deliveryInfo?.fulfillmentOption || null,
             createdAt: new Date().toISOString(),
             calendarEventId: null,
             calendarStatus: "pending",
@@ -133,11 +197,17 @@ export async function POST(request: NextRequest) {
               productName: item.name,
               customerName: paymentIntent.metadata.customerName || "",
               customerEmail: paymentIntent.metadata.customerEmail || "",
-              date: item.selectedDate,
-              startTime: item.selectedTime,
-              endTime: endTime,
-              price: item.price * item.quantity,
+              date: startDate,
+              startDate,
+              endDate,
+              startTime,
+              endTime,
+              endDayOffset,
+              price: item.totalPrice ?? item.price * item.quantity * ((item.numberOfDays as number) || 1),
               orderId: orderId,
+              notes: tempOrderData.customerInfo?.notes || undefined,
+              location: fulfillmentLocation,
+              fulfillmentOption: deliveryInfo?.fulfillmentOption,
             })
 
             const calendarResult = await calendarAPI.createEvent(calendarId, calendarEvent)
@@ -214,6 +284,8 @@ export async function POST(request: NextRequest) {
             startDate: item.startDate, // Pass startDate for calendar generation
             endDate: item.endDate, // Pass endDate for calendar generation
             startTime: item.startTime, // Pass startTime for calendar generation
+            endTime: item.endTime,
+            endDayOffset: item.endDayOffset,
           })),
           totalAmount: orderData.totalAmount,
           currency: orderData.currency,

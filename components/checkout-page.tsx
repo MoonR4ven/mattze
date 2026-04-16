@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useCart } from "@/hooks/use-cart"
 import { useI18n } from "@/contexts/i18n-context"
 import { Button } from "@/components/ui/button"
@@ -62,9 +62,27 @@ export function CheckoutPage() {
   const [currentStep, setCurrentStep] = useState<"info" | "payment">("info")
   const [isOrderItemsOpen, setIsOrderItemsOpen] = useState(true)
 
+  const eligiblePickupLocations = useMemo(() => (
+    settings?.pickupLocations?.filter((location) =>
+      items.every((item) => {
+        const allowed = item.pickupLocationIds
+        return !allowed || allowed.length === 0 || allowed.includes(location.id)
+      }),
+    ) || []
+  ), [settings?.pickupLocations, items])
+
   useEffect(() => {
     getSettings().then(setSettings).catch(() => setSettings(null))
   }, [])
+
+  useEffect(() => {
+    if (fulfillmentOption !== "self-collection") return
+    const allowedIds = new Set(eligiblePickupLocations.map((location) => location.id))
+    const filtered = pickupLocations.filter((location) => allowedIds.has(location.id))
+    if (filtered.length !== pickupLocations.length) {
+      setPickupLocations(filtered)
+    }
+  }, [fulfillmentOption, eligiblePickupLocations, pickupLocations, setPickupLocations])
 
   useEffect(() => {
     if (fulfillmentOption === "self-collection") {
@@ -107,7 +125,7 @@ export function CheckoutPage() {
         setDeliveryDetails({ distanceKm, fee: Math.round(fee * 100) / 100 })
       } catch (error) {
         if (!controller.signal.aborted) {
-          setDistanceError(error instanceof Error ? error.message : "Failed to calculate distance")
+          setDistanceError(error instanceof Error ? error.message : t("checkout.distanceFailed"))
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -120,7 +138,7 @@ export function CheckoutPage() {
       controller.abort()
       clearTimeout(timer)
     }
-  }, [customerInfo.address, customerInfo.city, customerInfo.postalCode, customerInfo.country, fulfillmentOption, settings, setDeliveryDetails])
+  }, [customerInfo.address, customerInfo.city, customerInfo.postalCode, customerInfo.country, fulfillmentOption, settings, setDeliveryDetails, t])
 
   if (items.length === 0) {
     return (
@@ -156,7 +174,8 @@ export function CheckoutPage() {
     if (!baseComplete) return false
 
     if (fulfillmentOption === "self-collection") {
-      return true
+      if (eligiblePickupLocations.length === 0) return true
+      return pickupLocations.length > 0
     }
 
     const addressComplete = customerInfo.address && customerInfo.city && customerInfo.postalCode
@@ -321,8 +340,9 @@ export function CheckoutPage() {
                         <div className="text-xs text-muted-foreground">
                           {t("checkout.pickupLimit").replace("{count}", String(settings.pickupSelectionLimit))}
                         </div>
-                        <div className="grid gap-2">
-                          {settings.pickupLocations.map((location) => {
+                        {eligiblePickupLocations.length > 0 ? (
+                          <div className="grid gap-2">
+                            {eligiblePickupLocations.map((location) => {
                             const selected = pickupLocations.some((pickup) => pickup.id === location.id)
                             const disabled = !selected && pickupLocations.length >= settings.pickupSelectionLimit
                             return (
@@ -345,8 +365,13 @@ export function CheckoutPage() {
                                 </span>
                               </label>
                             )
-                          })}
-                        </div>
+                            })}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                            {t("checkout.noPickupLocationAvailable")}
+                          </div>
+                        )}
                       </div>
                     ) : null}
 
@@ -422,7 +447,7 @@ export function CheckoutPage() {
                         </div>
                       </div>
 
-                      {item.selectedDate && item.selectedTime && (
+                      {item.selectedDate && (item.startTime || item.selectedTime) && (
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
@@ -430,7 +455,11 @@ export function CheckoutPage() {
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            <span>{item.selectedTime}</span>
+                            <span>
+                              {(item.startTime || item.selectedTime)}
+                              {item.endTime ? ` - ${item.endTime}` : ""}
+                              {(Number(item.endDayOffset) || 0) > 0 ? ` ${t("checkout.plusOneDay")}` : ""}
+                            </span>
                           </div>
                         </div>
                       )}

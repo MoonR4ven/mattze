@@ -9,9 +9,10 @@ import { ShoppingCart, Trash2, Plus, Minus, Calendar, Clock, ArrowRight } from "
 import Image from "next/image"
 import Link from "next/link"
 import { format } from "date-fns"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { getSettings, type AppSettings } from "@/lib/settings"
 import { calculateSubtotal, calculateTaxTotal } from "@/lib/cart-pricing"
+import { useI18n } from "@/contexts/i18n-context"
 
 export function CartPage() {
   const {
@@ -23,16 +24,34 @@ export function CartPage() {
     fulfillmentOption,
     setFulfillmentOption,
     deliveryFee,
-    deliveryDistanceKm,
     setDeliveryDetails,
     pickupLocations,
     setPickupLocations,
   } = useCart()
+  const { t } = useI18n()
   const [settings, setSettings] = useState<AppSettings | null>(null)
+
+  const eligiblePickupLocations = useMemo(() => (
+    settings?.pickupLocations?.filter((location) =>
+      items.every((item) => {
+        const allowed = item.pickupLocationIds
+        return !allowed || allowed.length === 0 || allowed.includes(location.id)
+      }),
+    ) || []
+  ), [settings?.pickupLocations, items])
 
   useEffect(() => {
     getSettings().then(setSettings).catch(() => setSettings(null))
   }, [])
+
+  useEffect(() => {
+    if (fulfillmentOption !== "self-collection") return
+    const allowedIds = new Set(eligiblePickupLocations.map((location) => location.id))
+    const filtered = pickupLocations.filter((location) => allowedIds.has(location.id))
+    if (filtered.length !== pickupLocations.length) {
+      setPickupLocations(filtered)
+    }
+  }, [fulfillmentOption, eligiblePickupLocations, pickupLocations, setPickupLocations])
 
   const subtotal = calculateSubtotal(items)
   const vatRate = settings?.vatRate ?? 21
@@ -46,10 +65,10 @@ export function CartPage() {
         <div className="container mx-auto px-4 py-8">
           <div className="text-center py-12">
             <ShoppingCart className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <h2 className="text-2xl font-bold mb-2">Your cart is empty</h2>
-            <p className="text-muted-foreground mb-6">Add some products to get started</p>
+            <h2 className="text-2xl font-bold mb-2">{t("cart.empty")}</h2>
+            <p className="text-muted-foreground mb-6">{t("cart.emptyDescription")}</p>
             <Button asChild>
-              <Link href="/">Continue Shopping</Link>
+              <Link href="/">{t("cart.continueShopping")}</Link>
             </Button>
           </div>
         </div>
@@ -61,9 +80,9 @@ export function CartPage() {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2">Shopping Cart</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2">{t("cart.title")}</h1>
           <p className="text-sm sm:text-base text-muted-foreground">
-            {getTotalItems()} {getTotalItems() === 1 ? "item" : "items"} in your cart
+            {getTotalItems()} {getTotalItems() === 1 ? t("cart.item") : t("cart.items")} {t("cart.inCart")}
           </p>
         </div>
 
@@ -100,7 +119,7 @@ export function CartPage() {
                       </Button>
                     </div>
 
-                    {item.selectedDate && item.selectedTime && (
+                    {item.selectedDate && (item.startTime || item.selectedTime) && (
                       <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -108,7 +127,11 @@ export function CartPage() {
                         </div>
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span className="text-xs sm:text-sm">{item.selectedTime}</span>
+                          <span className="text-xs sm:text-sm">
+                            {(item.startTime || item.selectedTime)}
+                            {item.endTime ? ` - ${item.endTime}` : ""}
+                            {(Number(item.endDayOffset) || 0) > 0 ? ` ${t("checkout.plusOneDay")}` : ""}
+                          </span>
                         </div>
                       </div>
                     )}
@@ -130,7 +153,7 @@ export function CartPage() {
                       </div>
                       <div className="text-right">
                         <div className="font-semibold">€{(item.totalPrice ?? item.price * item.quantity).toFixed(2)}</div>
-                        <div className="text-sm text-muted-foreground">€{item.price.toFixed(2)} / day</div>
+                        <div className="text-sm text-muted-foreground">€{item.price.toFixed(2)} {t("product.perDay")}</div>
                       </div>
                     </div>
                   </div>
@@ -141,10 +164,10 @@ export function CartPage() {
 
             <div className="flex justify-between items-center pt-4" suppressHydrationWarning>
               <Button variant="outline" onClick={clearCart}>
-                Clear Cart
+                {t("cart.clear")}
               </Button>
               <Button variant="ghost" asChild>
-                <Link href="/">Continue Shopping</Link>
+                <Link href="/">{t("cart.continueShopping")}</Link>
               </Button>
             </div>
           </div>
@@ -152,14 +175,14 @@ export function CartPage() {
           <div className="lg:col-span-1">
             <Card className="mb-4 bg-slate-100">
               <CardHeader>
-                <CardTitle>Fulfillment</CardTitle>
+                <CardTitle>{t("checkout.fulfillment")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="grid gap-2">
                   {[
-                    { value: "self-collection", label: "Self-Collection" },
-                    { value: "delivery-collection", label: "Delivery and Collection" },
-                    { value: "delivery-assembly", label: "Delivery, Setup, Dismantling and Collection" },
+                    { value: "self-collection", label: t("checkout.selfCollection") },
+                    { value: "delivery-collection", label: t("checkout.deliveryCollection") },
+                    { value: "delivery-assembly", label: t("checkout.deliveryAssembly") },
                   ].map((option) => (
                     <label key={option.value} className="flex items-center gap-2 text-sm">
                       <input
@@ -183,9 +206,10 @@ export function CartPage() {
 
                 {fulfillmentOption === "self-collection" && settings?.pickupLocations?.length ? (
                   <div className="space-y-2">
-                    <div className="text-xs text-muted-foreground">Select pickup location(s) (up to {settings.pickupSelectionLimit})</div>
-                    <div className="grid gap-2">
-                      {settings.pickupLocations.map((location) => {
+                    <div className="text-xs text-muted-foreground">{t("checkout.pickupLimit").replace("{count}", String(settings.pickupSelectionLimit))}</div>
+                    {eligiblePickupLocations.length > 0 ? (
+                      <div className="grid gap-2">
+                        {eligiblePickupLocations.map((location) => {
                         const selected = pickupLocations.some((pickup) => pickup.id === location.id)
                         const disabled = !selected && pickupLocations.length >= settings.pickupSelectionLimit
                         return (
@@ -208,14 +232,19 @@ export function CartPage() {
                             </span>
                           </label>
                         )
-                      })}
-                    </div>
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                        {t("checkout.noPickupLocationAvailable")}
+                      </div>
+                    )}
                   </div>
                 ) : null}
 
                 {fulfillmentOption !== "self-collection" && (
                   <div className="text-xs text-muted-foreground">
-                    Delivery fee is calculated at checkout after entering the address.
+                    {t("cart.deliveryCalculatedAddress")}
                   </div>
                 )}
               </CardContent>
@@ -223,20 +252,20 @@ export function CartPage() {
 
             <Card className="sticky top-4 bg-slate-100">
               <CardHeader>
-                <CardTitle>Order Summary</CardTitle>
+                <CardTitle>{t("checkout.orderSummary")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span>Subtotal ({getTotalItems()} items)</span>
+                  <span>{t("cart.subtotal")} ({getTotalItems()} {getTotalItems() === 1 ? t("cart.item") : t("cart.items")})</span>
                   <span>€{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Delivery</span>
-                  <span>{fulfillmentOption === "self-collection" ? "Free" : (deliveryFee != null ? `€${deliveryTotal.toFixed(2)}` : "Calculated at checkout")}</span>
+                  <span>{t("cart.delivery")}</span>
+                  <span>{fulfillmentOption === "self-collection" ? t("cart.free") : (deliveryFee != null ? `€${deliveryTotal.toFixed(2)}` : t("cart.deliveryCalculated"))}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Tax</span>
+                  <span>{t("cart.tax")}</span>
                   <span>€{tax.toFixed(2)}</span>
                 </div>
               </div>
@@ -244,18 +273,18 @@ export function CartPage() {
               <Separator />
 
               <div className="flex justify-between font-semibold text-lg">
-                <span>Total</span>
+                <span>{t("cart.total")}</span>
                 <span>€{total.toFixed(2)}</span>
               </div>
 
               <Button asChild className="w-full" size="lg">
                 <Link href="/checkout">
-                  Proceed to Checkout
+                  {t("cart.proceedCheckout")}
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Link>
               </Button>
 
-              <div className="text-xs text-muted-foreground text-center">Secure checkout powered by Stripe</div>
+              <div className="text-xs text-muted-foreground text-center">{t("cart.poweredByStripe")}</div>
             </CardContent>
             </Card>
           </div>

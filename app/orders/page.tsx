@@ -11,6 +11,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Package, AlertCircle, CheckCircle2, Clock } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
+import { de, enUS } from "date-fns/locale"
+import { useI18n } from "@/contexts/i18n-context"
 
 interface OrderItem {
   id: string
@@ -43,9 +45,11 @@ interface Order {
 
 export default function OrdersPage() {
   const { user } = useAuth()
+  const { t, locale } = useI18n()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const dateLocale = locale === "de" ? de : enUS
 
   useEffect(() => {
     async function fetchOrders() {
@@ -78,14 +82,14 @@ export default function OrdersPage() {
         setOrders(fetchedOrders)
       } catch (err) {
         console.error("❌ Error fetching orders:", err)
-        setError("Failed to load orders. Please try again.")
+        setError(t("orders.loadFailed"))
       } finally {
         setLoading(false)
       }
     }
 
     fetchOrders()
-  }, [user?.email])
+  }, [user?.email, t])
 
   if (!user) {
     return (
@@ -93,9 +97,9 @@ export default function OrdersPage() {
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Please log in to view your orders.{" "}
+            {t("orders.loginRequired")}{" "}
             <Link href="/login" className="underline font-medium">
-              Go to login
+              {t("orders.goToLogin")}
             </Link>
           </AlertDescription>
         </Alert>
@@ -109,7 +113,7 @@ export default function OrdersPage() {
         <div className="flex items-center justify-center py-20">
           <div className="text-center space-y-4">
             <div className="w-12 h-12 mx-auto border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-muted-foreground">Loading your orders...</p>
+            <p className="text-muted-foreground">{t("orders.loadingOrders")}</p>
           </div>
         </div>
       </div>
@@ -134,12 +138,12 @@ export default function OrdersPage() {
           <div className="mx-auto mb-6 p-6 rounded-3xl bg-gradient-to-br from-blue-100 to-turquoise-100 w-fit">
             <Package className="h-16 w-16 text-blue-600" />
           </div>
-          <h1 className="text-3xl font-bold mb-2">No Orders Yet</h1>
+          <h1 className="text-3xl font-bold mb-2">{t("orders.noOrdersYet")}</h1>
           <p className="text-muted-foreground mb-6">
-            You haven't placed any orders yet. Start exploring our products!
+            {t("orders.noOrdersDescription")}
           </p>
           <Button asChild size="lg">
-            <Link href="/products">Browse Products</Link>
+            <Link href="/products">{t("orders.browseProducts")}</Link>
           </Button>
         </div>
       </div>
@@ -149,9 +153,9 @@ export default function OrdersPage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Your Orders</h1>
+        <h1 className="text-4xl font-bold mb-2">{t("orders.yourOrders")}</h1>
         <p className="text-muted-foreground">
-          View and manage all your rental bookings
+          {t("orders.manageBookings")}
         </p>
       </div>
 
@@ -162,12 +166,13 @@ export default function OrdersPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <CardTitle className="text-xl mb-2">
-                    Order {order.paymentIntentId.slice(-8).toUpperCase()}
+                    {t("orders.orderLabel")} {order.paymentIntentId.slice(-8).toUpperCase()}
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
                     {format(
                       new Date(order.createdAt),
-                      "MMMM dd, yyyy 'at' hh:mm a"
+                      "PPP p",
+                      { locale: dateLocale }
                     )}
                   </p>
                 </div>
@@ -180,12 +185,12 @@ export default function OrdersPage() {
                     {order.paymentStatus === "paid" ? (
                       <>
                         <CheckCircle2 className="h-3 w-3 mr-1" />
-                        Paid
+                        {t("orders.paid")}
                       </>
                     ) : (
                       <>
                         <Clock className="h-3 w-3 mr-1" />
-                        Pending
+                        {t("orders.pending")}
                       </>
                     )}
                   </Badge>
@@ -197,7 +202,7 @@ export default function OrdersPage() {
             <CardContent className="pt-6">
               {/* Order Items */}
               <div className="mb-6">
-                <h3 className="font-semibold mb-3">Items</h3>
+                <h3 className="font-semibold mb-3">{t("orders.itemsLabel")}</h3>
                 <div className="space-y-2">
                   {order.items.map((item, idx) => (
                     <div key={idx} className="flex justify-between items-start text-sm pb-2 border-b last:border-0">
@@ -206,7 +211,7 @@ export default function OrdersPage() {
                         {item.selectedDate && (
                           <p className="text-xs text-muted-foreground">
                             📅 {item.selectedDate}
-                            {item.selectedTime && ` at ${item.selectedTime}`}
+                            {item.selectedTime && ` ${t("orders.atTime")} ${item.selectedTime}`}
                           </p>
                         )}
                       </div>
@@ -227,7 +232,7 @@ export default function OrdersPage() {
               <div className="grid md:grid-cols-3 gap-4 mb-6 py-6 border-t border-b">
                 <div>
                   <p className="text-sm font-medium mb-2 flex items-center gap-2">
-                    💳 Payment
+                    💳 {t("orders.payment")}
                   </p>
                   <Badge
                     variant={
@@ -236,13 +241,13 @@ export default function OrdersPage() {
                     className="w-full justify-center"
                   >
                     {order.paymentStatus === "paid"
-                      ? "✓ Confirmed"
-                      : "Processing"}
+                      ? `✓ ${t("orders.confirmed")}`
+                      : t("orders.processing")}
                   </Badge>
                 </div>
                 <div>
                   <p className="text-sm font-medium mb-2 flex items-center gap-2">
-                    📦 Billbee
+                    📦 {t("orders.billbee")}
                   </p>
                   <Badge
                     variant={
@@ -255,17 +260,17 @@ export default function OrdersPage() {
                     className="w-full justify-center"
                   >
                     {order.billbeeStatus === "invoiced"
-                      ? "✓ Invoiced"
+                      ? `✓ ${t("orders.invoiced")}`
                       : order.billbeeStatus === "created"
-                        ? "✓ Created"
+                        ? `✓ ${t("orders.created")}`
                         : order.billbeeStatus === "failed"
-                          ? "✗ Failed"
-                          : "Pending"}
+                          ? `✗ ${t("orders.failed")}`
+                          : t("orders.pending")}
                   </Badge>
                 </div>
                 <div>
                   <p className="text-sm font-medium mb-2 flex items-center gap-2">
-                    📅 Calendar
+                    📅 {t("orders.calendar")}
                   </p>
                   <Badge
                     variant={
@@ -278,17 +283,17 @@ export default function OrdersPage() {
                     className="w-full justify-center"
                   >
                     {order.calendarStatus === "created"
-                      ? "✓ Scheduled"
+                      ? `✓ ${t("orders.scheduled")}`
                       : order.calendarStatus === "failed"
-                        ? "✗ Failed"
-                        : "Pending"}
+                        ? `✗ ${t("orders.failed")}`
+                        : t("orders.pending")}
                   </Badge>
                 </div>
               </div>
 
               {/* Order Total */}
               <div className="flex justify-end items-center gap-4 mb-4">
-                <span className="text-lg font-semibold">Total:</span>
+                <span className="text-lg font-semibold">{t("orders.totalLabel")}</span>
                 <span className="text-2xl font-bold text-primary">
                   €{order.totalAmount.toFixed(2)}
                 </span>
@@ -296,7 +301,7 @@ export default function OrdersPage() {
 
               {/* Customer Info */}
               <div className="bg-muted/50 p-4 rounded-lg text-sm">
-                <p className="font-medium mb-2">Contact Information</p>
+                <p className="font-medium mb-2">{t("orders.contactInformation")}</p>
                 <p>
                   {order.customerInfo.firstName} {order.customerInfo.lastName}
                 </p>
@@ -314,10 +319,10 @@ export default function OrdersPage() {
 
       <div className="flex gap-4 justify-center mt-8">
         <Button variant="outline" asChild>
-          <Link href="/">Back to Home</Link>
+          <Link href="/">{t("orders.backToHome")}</Link>
         </Button>
         <Button asChild>
-          <Link href="/products">Continue Shopping</Link>
+          <Link href="/products">{t("orders.continueShopping")}</Link>
         </Button>
       </div>
     </div>

@@ -47,6 +47,9 @@ export function ProductCard({ product }: ProductCardProps) {
     const safeDays = days || 1
     const pricePerDay = getPricePerDay(product, safeDays)
     const totalPrice = pricePerDay * safeDays * (quantity || 1)
+    const bookingStartTime = product.bookingStartTime || "10:00"
+    const bookingEndTime = product.bookingEndTime || "11:00"
+    const bookingEndDayOffset = product.bookingEndDayOffset ?? 0
 
     addToCart({
       ...product,
@@ -59,7 +62,10 @@ export function ProductCard({ product }: ProductCardProps) {
       numberOfDays: days,
       totalPrice,
       selectedDate: startDate,
-      selectedTime: "10:00", // Default time: 10:00 AM
+      selectedTime: bookingStartTime,
+      startTime: bookingStartTime,
+      endTime: bookingEndTime,
+      endDayOffset: bookingEndDayOffset,
     })
     setShowBookingDialog(false)
     
@@ -113,7 +119,7 @@ export function ProductCard({ product }: ProductCardProps) {
               )}
 
               {product.available && (
-                <Badge className="absolute top-6 right-6 bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] border-0 shadow-xl backdrop-blur-sm text-sm px-4 py-2 rounded-full font-semibold">
+                <Badge className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] border-0 shadow-xl backdrop-blur-sm text-[10px] sm:text-xs px-2.5 sm:px-3 py-1 rounded-full font-semibold max-w-[75%] truncate">
                   {t("product.available")}
                 </Badge>
               )}
@@ -146,17 +152,17 @@ export function ProductCard({ product }: ProductCardProps) {
                 </div>
               )}
 
-              <div className="flex items-center justify-between pt-2">
-                <div className="flex items-center gap-1.5">
+              <div className="pt-2 space-y-2">
+                <div className="flex items-center gap-1.5 min-w-0">
                   <Euro className="h-4 w-4 text-[rgb(var(--mavi-blue))]" />
-                  <span className="font-bold text-xl bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
+                  <span className="font-bold text-lg sm:text-xl bg-gradient-to-r from-[rgb(var(--mavi-blue))] to-[rgb(var(--mavi-turquoise))] bg-clip-text text-transparent">
                     {product.price.toFixed(2)}
                   </span>
-                  <span className="text-xs text-muted-foreground">{t("product.perDay")}</span>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">{t("product.perDay")}</span>
                 </div>
                 <Badge
                   variant="secondary"
-                  className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 border-[rgb(var(--mavi-blue))]/20 text-xs px-2 py-1 rounded-full"
+                  className="bg-gradient-to-r from-[rgb(var(--mavi-blue))]/10 to-[rgb(var(--mavi-turquoise))]/10 border-[rgb(var(--mavi-blue))]/20 text-xs px-2 py-1 rounded-full w-fit max-w-full truncate"
                 >
                   {product.type}
                 </Badge>
