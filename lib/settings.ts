@@ -15,6 +15,13 @@ export interface AppSettings {
     address: string
   }>
   pickupSelectionLimit: number
+  sellerContact: {
+    companyName: string
+    contactName: string
+    email: string
+    phone: string
+    address: string
+  }
   updatedAt: string
 }
 
@@ -30,6 +37,13 @@ const defaultSettings: AppSettings = {
   assemblyFee: 0,
   pickupLocations: [],
   pickupSelectionLimit: 2,
+  sellerContact: {
+    companyName: "",
+    contactName: "",
+    email: "",
+    phone: "",
+    address: "",
+  },
   updatedAt: new Date().toISOString(),
 }
 
@@ -38,7 +52,16 @@ export async function getSettings(): Promise<AppSettings> {
     const settingsDoc = await getDoc(doc(db, "settings", SETTINGS_DOC_ID))
     
     if (settingsDoc.exists()) {
-      return settingsDoc.data() as AppSettings
+      const data = settingsDoc.data() as Partial<AppSettings>
+      return {
+        ...defaultSettings,
+        ...data,
+        pickupLocations: data.pickupLocations ?? defaultSettings.pickupLocations,
+        sellerContact: {
+          ...defaultSettings.sellerContact,
+          ...(data.sellerContact || {}),
+        },
+      }
     }
     
     // If no settings exist, create default settings

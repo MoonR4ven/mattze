@@ -10,7 +10,7 @@ export interface Booking {
   endTime: string
   customerEmail: string
   customerName: string
-  status: "pending" | "confirmed" | "completed" | "cancelled"
+  status: "pending" | "confirmed" | "completed" | "blocked" | "cancelled"
   createdAt: string
   price: number
   quantity?: number
@@ -29,7 +29,7 @@ export async function getBookingsForDate(productId: string, date: string): Promi
       collection(db, "bookings"),
       where("productId", "==", productId),
       where("date", "==", date),
-      where("status", "in", ["pending", "confirmed"]),
+      where("status", "in", ["pending", "confirmed", "blocked"]),
     )
 
     const querySnapshot = await getDocs(q)
@@ -118,7 +118,10 @@ export async function checkTimeSlotAvailability(
   }
 }
 
-export async function getAvailableTimeSlots(productId: string, date: string): Promise<TimeSlot[]> {
+export async function getAvailableTimeSlots(_productId: string, _date: string): Promise<TimeSlot[]> {
+  void _productId
+  void _date
+
   const timeSlots = [
     "09:00",
     "10:00",
@@ -254,7 +257,21 @@ export async function getAvailableQuantityForDate(
       }
     }
     
-    const available = Math.max(0, productInventory - bookedQuantity)
+    // Include explicit day blocks created in admin for phone/manual bookings.
+    const blockedQ = query(
+      collection(db, "bookings"),
+      where("productId", "==", productId),
+      where("date", "==", date),
+      where("status", "==", "blocked"),
+    )
+
+    const blockedSnapshot = await getDocs(blockedQ)
+    const blockedQuantity = blockedSnapshot.docs.reduce((sum, doc) => {
+      const quantity = Number(doc.data().quantity)
+      return sum + (Number.isFinite(quantity) && quantity > 0 ? quantity : 1)
+    }, 0)
+
+    const available = Math.max(0, productInventory - bookedQuantity - blockedQuantity)
     return available
   } catch (error) {
     console.error("Error calculating available quantity:", error)

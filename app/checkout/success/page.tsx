@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { CheckCircle, Calendar, Mail, Phone, Package, Clock, AlertCircle, Zap, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -66,6 +66,9 @@ export default function CheckoutSuccessPage() {
   const { t, locale } = useI18n()
   const searchParams = useSearchParams()
   const [settings, setSettings] = useState<AppSettings | null>(null)
+  const [isFinalizingPayment, setIsFinalizingPayment] = useState(false)
+  const [paymentFinalizationError, setPaymentFinalizationError] = useState<string | null>(null)
+  const finalizedPaymentIntentRef = useRef<string | null>(null)
   const paymentIntentId = searchParams.get("payment_intent")
 
   const getLastOrderData = (): LastOrderData => {
@@ -99,6 +102,66 @@ export default function CheckoutSuccessPage() {
   useEffect(() => {
     getSettings().then(setSettings).catch(() => setSettings(null))
   }, [])
+
+  useEffect(() => {
+    if (!paymentIntentId) {
+      return
+    }
+
+    if (finalizedPaymentIntentRef.current === paymentIntentId) {
+      return
+    }
+
+    const storageKey = `payment-finalized:${paymentIntentId}`
+    if (typeof window !== "undefined" && window.sessionStorage.getItem(storageKey) === "1") {
+      finalizedPaymentIntentRef.current = paymentIntentId
+      return
+    }
+
+    finalizedPaymentIntentRef.current = paymentIntentId
+    let cancelled = false
+
+    const replayPaymentFinalization = async () => {
+      setIsFinalizingPayment(true)
+      setPaymentFinalizationError(null)
+
+      try {
+        const response = await fetch("/api/confirm-payment", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            paymentIntentId,
+          }),
+        })
+
+        const result = await response.json().catch(() => ({})) as { success?: boolean; error?: string }
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || "Failed to confirm payment")
+        }
+
+        if (!cancelled) {
+          window.sessionStorage.setItem(storageKey, "1")
+        }
+      } catch (error) {
+        console.error("Payment finalization replay failed:", error)
+        if (!cancelled) {
+          setPaymentFinalizationError(t("checkout.orderConfirmationFailed"))
+        }
+      } finally {
+        if (!cancelled) {
+          setIsFinalizingPayment(false)
+        }
+      }
+    }
+
+    void replayPaymentFinalization()
+
+    return () => {
+      cancelled = true
+    }
+  }, [paymentIntentId, t])
 
   // Generate calendar links for items
   const generateCalendarLinks = (item: OrderItem) => {
@@ -207,6 +270,22 @@ export default function CheckoutSuccessPage() {
       </div>
 
       {/* Order ID */}
+      {isFinalizingPayment && (
+        <Alert className="mb-6 border-2 border-[rgb(var(--mavi-blue))]/20 bg-slate-100">
+          <AlertCircle className="h-4 w-4 text-[rgb(var(--mavi-blue))]" />
+          <AlertDescription className="text-[rgb(var(--mavi-blue))]">
+            {t("checkout.processing")}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {paymentFinalizationError && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{paymentFinalizationError}</AlertDescription>
+        </Alert>
+      )}
+
       {paymentIntentId && (
         <Card className="mb-6 bg-slate-100 border-2 border-[rgb(var(--mavi-blue))]/20">
           <CardContent className="p-4">

@@ -8,6 +8,7 @@ export interface Product {
   name: string
   description: string
   type: string
+  category?: string
   price: number
   taxRate?: number
   pricingTiers?: PricingTier[]
@@ -24,6 +25,10 @@ export interface Product {
   features?: string[]
   dimensions?: string
   capacity?: string
+  pickupLocationIds?: string[]
+  bookingStartTime?: string
+  bookingEndTime?: string
+  bookingEndDayOffset?: number
 }
 
 export interface BookingSlot {
@@ -44,6 +49,9 @@ export interface CartItem extends Product {
   numberOfDays?: number
   totalPrice?: number
   taxRate?: number
+  startTime?: string
+  endTime?: string
+  endDayOffset?: number
 }
 
 export interface Order {
@@ -69,6 +77,10 @@ export interface Booking {
   endTime: string
   customerEmail: string
   customerName: string
-  status: "confirmed" | "pending" | "cancelled"
+  status: "confirmed" | "pending" | "completed" | "blocked" | "cancelled"
   price: number
+  startDate?: string
+  endDate?: string
+  endDayOffset?: number
+  location?: string
 }

@@ -1,4 +1,4 @@
-import { google } from "googleapis"
+import { google, calendar_v3 } from "googleapis"
 
 export interface CalendarEvent {
   id?: string
@@ -20,8 +20,8 @@ export interface CalendarEvent {
 }
 
 export class GoogleCalendarAPI {
-  private calendar: any
-  private auth: any
+  private calendar: calendar_v3.Calendar
+  private auth: InstanceType<typeof google.auth.GoogleAuth>
 
   constructor() {
     this.auth = new google.auth.GoogleAuth({
@@ -105,7 +105,7 @@ export class GoogleCalendarAPI {
     }
   }
 
-  async getEvent(calendarId: string, eventId: string): Promise<any> {
+  async getEvent(calendarId: string, eventId: string): Promise<calendar_v3.Schema$Event | undefined> {
     try {
       const response = await this.calendar.events.get({
         calendarId,
@@ -123,7 +123,7 @@ export class GoogleCalendarAPI {
     calendarId: string,
     timeMin?: string,
     timeMax?: string,
-  ): Promise<{ success: boolean; events?: any[]; error?: string }> {
+  ): Promise<{ success: boolean; events?: calendar_v3.Schema$Event[]; error?: string }> {
     try {
       const response = await this.calendar.events.list({
         calendarId,
@@ -150,15 +150,52 @@ export class GoogleCalendarAPI {
     productName: string
     customerName: string
     customerEmail: string
-    date: string
+    date?: string
+    startDate?: string
+    endDate?: string
     startTime: string
     endTime: string
+    endDayOffset?: number
     price: number
     orderId: string
     notes?: string
+    location?: string
+    fulfillmentOption?: string
   }): CalendarEvent {
-    const startDateTime = new Date(`${booking.date}T${booking.startTime}:00`)
-    const endDateTime = new Date(`${booking.date}T${booking.endTime}:00`)
+    const addDaysToDateString = (dateString: string, days: number): string => {
+      const [year, month, day] = dateString.split("-").map(Number)
+      const date = new Date(year, month - 1, day)
+      date.setDate(date.getDate() + days)
+      const yyyy = date.getFullYear()
+      const mm = String(date.getMonth() + 1).padStart(2, "0")
+      const dd = String(date.getDate()).padStart(2, "0")
+      return `${yyyy}-${mm}-${dd}`
+    }
+
+    const startDate = booking.startDate || booking.date
+    if (!startDate) {
+      throw new Error("Missing booking start date")
+    }
+
+    const baseEndDate = booking.endDate || booking.date || startDate
+    const endDate = addDaysToDateString(baseEndDate, booking.endDayOffset ?? 0)
+
+    const startDateTime = new Date(`${startDate}T${booking.startTime}:00`)
+    let endDateTime = new Date(`${endDate}T${booking.endTime}:00`)
+
+    if (endDateTime <= startDateTime) {
+      endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000)
+    }
+
+    const fulfillmentLabel = booking.fulfillmentOption
+      ? ({
+          "self-collection": "Self-collection",
+          "delivery-collection": "Delivery + collection",
+          "delivery-assembly": "Delivery + setup + collection",
+        }[booking.fulfillmentOption] || booking.fulfillmentOption)
+      : ""
+    const fulfillmentLine = fulfillmentLabel ? `• Fulfillment: ${fulfillmentLabel}` : ""
+    const locationLine = booking.location ? `• Location: ${booking.location}` : ""
 
     return {
       summary: `${booking.productName} - ${booking.customerName}`,
@@ -169,6 +206,8 @@ Rental Booking Details:
 • Email: ${booking.customerEmail}
 • Price: €${booking.price.toFixed(2)}
 • Order ID: ${booking.orderId}
+${fulfillmentLine}
+${locationLine}
 ${booking.notes ? `• Notes: ${booking.notes}` : ""}
 
 This is an automated booking from the rental system.
@@ -187,7 +226,7 @@ This is an automated booking from the rental system.
           displayName: booking.customerName,
         },
       ],
-      location: "Delivery/Pickup Location (TBD)",
+      location: booking.location || "",
     }
   }
 
