@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useCart } from "@/hooks/use-cart"
 import { useI18n } from "@/contexts/i18n-context"
 import { Button } from "@/components/ui/button"
@@ -61,6 +61,18 @@ export function CheckoutPage() {
   })
   const [currentStep, setCurrentStep] = useState<"info" | "payment">("info")
   const [isOrderItemsOpen, setIsOrderItemsOpen] = useState(true)
+  const [lastCalculatedDeliveryKey, setLastCalculatedDeliveryKey] = useState<string | null>(null)
+  const deliveryKeyRef = useRef("")
+
+  const normalizedAddress = {
+    address: customerInfo.address.trim(),
+    city: customerInfo.city.trim(),
+    postalCode: customerInfo.postalCode.trim(),
+    country: customerInfo.country.trim(),
+  }
+  const originAddress = settings?.deliveryOriginAddress?.trim() || ""
+  const hasDeliveryAddress = Boolean(normalizedAddress.address && normalizedAddress.city && normalizedAddress.postalCode)
+  const deliveryCalculationKey = `${fulfillmentOption}|${normalizedAddress.address.toLowerCase()}|${normalizedAddress.postalCode.toLowerCase()}|${normalizedAddress.city.toLowerCase()}|${normalizedAddress.country.toLowerCase()}`
 
   const eligiblePickupLocations = useMemo(() => (
     settings?.pickupLocations?.filter((location) =>
@@ -76,6 +88,10 @@ export function CheckoutPage() {
   }, [])
 
   useEffect(() => {
+    deliveryKeyRef.current = deliveryCalculationKey
+  }, [deliveryCalculationKey])
+
+  useEffect(() => {
     if (fulfillmentOption !== "self-collection") return
     const allowedIds = new Set(eligiblePickupLocations.map((location) => location.id))
     const filtered = pickupLocations.filter((location) => allowedIds.has(location.id))
@@ -86,59 +102,73 @@ export function CheckoutPage() {
 
   useEffect(() => {
     if (fulfillmentOption === "self-collection") {
+      setDistanceLoading(false)
       setDistanceError(null)
       setDeliveryDetails({ distanceKm: undefined, fee: 0 })
+      setLastCalculatedDeliveryKey(null)
       return
     }
 
-    const hasAddress = Boolean(customerInfo.address && customerInfo.city && customerInfo.postalCode)
-    const origin = settings?.deliveryOriginAddress
-    if (!hasAddress || !origin) {
+    // Invalidate stale delivery calculations whenever delivery address or option changes.
+    setDistanceLoading(false)
+    setDistanceError(null)
+    setDeliveryDetails({ distanceKm: undefined, fee: undefined })
+    setLastCalculatedDeliveryKey(null)
+  }, [deliveryCalculationKey, fulfillmentOption, setDeliveryDetails])
+
+  const calculateDelivery = async () => {
+    if (fulfillmentOption === "self-collection") {
       return
     }
 
-    const controller = new AbortController()
-    const timer = setTimeout(async () => {
-      setDistanceLoading(true)
-      setDistanceError(null)
-      try {
-        const destination = `${customerInfo.address}, ${customerInfo.postalCode} ${customerInfo.city}, ${customerInfo.country || ""}`
-        const response = await fetch("/api/delivery-distance", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ origin, destination }),
-          signal: controller.signal,
-        })
+    if (!originAddress) {
+      setDistanceError(t("checkout.distanceFailed"))
+      return
+    }
 
-        const data = await response.json()
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to calculate distance")
-        }
+    if (!hasDeliveryAddress) {
+      setDistanceError(t("checkout.enterAddressToCalculate"))
+      return
+    }
 
-        const distanceKm = data.distanceKm as number
-        const baseRadius = settings?.deliveryBaseRadiusKm ?? 10
-        const baseFee = settings?.deliveryBaseFee ?? 20
-        const perKm = settings?.deliveryPerKmFee ?? 1
-        const assemblyFee = fulfillmentOption === "delivery-assembly" ? (settings?.assemblyFee ?? 0) : 0
-        const extraKm = Math.max(0, distanceKm - baseRadius)
-        const fee = baseFee + extraKm * perKm + assemblyFee
-        setDeliveryDetails({ distanceKm, fee: Math.round(fee * 100) / 100 })
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          setDistanceError(error instanceof Error ? error.message : t("checkout.distanceFailed"))
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setDistanceLoading(false)
-        }
+    const requestKey = deliveryCalculationKey
+    setDistanceLoading(true)
+    setDistanceError(null)
+
+    try {
+      const destination = `${normalizedAddress.address}, ${normalizedAddress.postalCode} ${normalizedAddress.city}, ${normalizedAddress.country || ""}`
+      const response = await fetch("/api/delivery-distance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ origin: originAddress, destination }),
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to calculate distance")
       }
-    }, 500)
 
-    return () => {
-      controller.abort()
-      clearTimeout(timer)
+      if (deliveryKeyRef.current !== requestKey) {
+        return
+      }
+
+      const distanceKm = data.distanceKm as number
+      const baseRadius = settings?.deliveryBaseRadiusKm ?? 10
+      const baseFee = settings?.deliveryBaseFee ?? 20
+      const perKm = settings?.deliveryPerKmFee ?? 1
+      const assemblyFee = fulfillmentOption === "delivery-assembly" ? (settings?.assemblyFee ?? 0) : 0
+      const extraKm = Math.max(0, distanceKm - baseRadius)
+      const fee = baseFee + extraKm * perKm + assemblyFee
+      setDeliveryDetails({ distanceKm, fee: Math.round(fee * 100) / 100 })
+      setLastCalculatedDeliveryKey(requestKey)
+    } catch (error) {
+      if (deliveryKeyRef.current === requestKey) {
+        setDistanceError(error instanceof Error ? error.message : t("checkout.distanceFailed"))
+      }
+    } finally {
+      setDistanceLoading(false)
     }
-  }, [customerInfo.address, customerInfo.city, customerInfo.postalCode, customerInfo.country, fulfillmentOption, settings, setDeliveryDetails, t])
+  }
 
   if (items.length === 0) {
     return (
@@ -178,10 +208,17 @@ export function CheckoutPage() {
       return pickupLocations.length > 0
     }
 
-    const addressComplete = customerInfo.address && customerInfo.city && customerInfo.postalCode
-    const deliveryCalculated = deliveryFee != null && !distanceLoading && !distanceError
+    const addressComplete = hasDeliveryAddress
+    const deliveryCalculated =
+      deliveryDistanceKm != null &&
+      deliveryFee != null &&
+      lastCalculatedDeliveryKey === deliveryCalculationKey &&
+      !distanceLoading &&
+      !distanceError
     return Boolean(addressComplete && deliveryCalculated)
   }
+
+  const canCalculateDelivery = fulfillmentOption !== "self-collection" && hasDeliveryAddress && Boolean(originAddress)
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -376,18 +413,28 @@ export function CheckoutPage() {
                     ) : null}
 
                     {fulfillmentOption !== "self-collection" && (
-                      <div className="text-xs text-muted-foreground">
-                        {distanceLoading && t("checkout.calculatingDistance")}
-                        {!distanceLoading && deliveryDistanceKm != null && (
-                          <span>
-                            {t("checkout.distanceResult")
-                              .replace("{distance}", deliveryDistanceKm.toFixed(1))
-                              .replace("{fee}", (deliveryFee ?? 0).toFixed(2))}
-                          </span>
-                        )}
-                        {!distanceLoading && distanceError && (
-                          <span className="text-destructive">{distanceError}</span>
-                        )}
+                      <div className="space-y-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={calculateDelivery}
+                          disabled={!canCalculateDelivery || distanceLoading}
+                        >
+                          {distanceLoading ? t("checkout.calculatingDistance") : t("checkout.calculateDeliveryAction")}
+                        </Button>
+
+                        <div className="text-xs text-muted-foreground">
+                          {!hasDeliveryAddress && !distanceError && t("checkout.enterAddressToCalculate")}
+                          {hasDeliveryAddress && !distanceLoading && !distanceError && lastCalculatedDeliveryKey !== deliveryCalculationKey && t("checkout.deliveryNeedsCalculation")}
+                          {!distanceLoading && deliveryDistanceKm != null && lastCalculatedDeliveryKey === deliveryCalculationKey && (
+                            <span>
+                              {t("checkout.distanceResult")
+                                .replace("{distance}", deliveryDistanceKm.toFixed(1))
+                                .replace("{fee}", (deliveryFee ?? 0).toFixed(2))}
+                            </span>
+                          )}
+                          {!distanceLoading && distanceError && <span className="text-destructive">{distanceError}</span>}
+                        </div>
                       </div>
                     )}
                   </div>
