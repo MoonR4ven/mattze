@@ -7,6 +7,16 @@ import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Lock, CreditCard, AlertCircle } from "lucide-react"
 import { useCart } from "@/hooks/use-cart"
 import { useRouter } from "next/navigation"
@@ -15,6 +25,8 @@ import { getSettings, type AppSettings } from "@/lib/settings"
 import { calculateSubtotal, calculateTaxTotal } from "@/lib/cart-pricing"
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
+const TERMS_URL = "https://www.mavi-rent.de/agb/"
+const PRIVACY_URL = "https://www.mavi-rent.de/datenschutzerklarung/"
 
 interface CustomerInfo {
   firstName: string
@@ -57,6 +69,8 @@ function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
 
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showConsentDialog, setShowConsentDialog] = useState(false)
+  const [consentAccepted, setConsentAccepted] = useState(false)
 
   useEffect(() => {
     getSettings().then(setSettings).catch(() => setSettings(null))
@@ -68,9 +82,65 @@ function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
   const deliveryTotal = deliveryFee ?? 0
   const totalAmount = subtotal + tax + deliveryTotal
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault()
+  const persistLastOrder = () => {
+    sessionStorage.setItem("lastOrder", JSON.stringify({
+      customerInfo,
+      items,
+      fulfillmentOption,
+      deliveryDistanceKm,
+      deliveryFee: deliveryTotal,
+      pickupLocations,
+      pricing: {
+        subtotal,
+        tax,
+        vatRate,
+        deliveryFee: deliveryTotal,
+        total: totalAmount,
+      },
+    }))
+  }
 
+  const navigateToSuccess = (paymentIntentId?: string) => {
+    const search = paymentIntentId ? `?payment_intent=${encodeURIComponent(paymentIntentId)}` : ""
+    router.push(`/checkout/success${search}`)
+  }
+
+  const finalizeOrderSync = async (paymentIntentId: string): Promise<"success" | "retryable" | "failed"> => {
+    try {
+      const confirmResponse = await fetch("/api/confirm-payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          paymentIntentId,
+        }),
+      })
+
+      const result = await confirmResponse.json().catch(() => ({})) as {
+        success?: boolean
+        retryable?: boolean
+        error?: string
+      }
+
+      if (confirmResponse.ok && result.success) {
+        return "success"
+      }
+
+      if (confirmResponse.status === 202 || result.retryable) {
+        return "retryable"
+      }
+
+      setError(result.error || t("checkout.orderConfirmationFailed"))
+      return "failed"
+    } catch (err) {
+      console.error("Order confirmation failed:", err)
+      setError(t("checkout.orderConfirmationFailed"))
+      return "failed"
+    }
+  }
+
+  const processPayment = async () => {
     if (!stripe || !elements) {
       return
     }
@@ -90,54 +160,63 @@ function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
 
       if (stripeError) {
         setError(getLocalizedPaymentError(stripeError.message, t))
-      } else if (paymentIntent && paymentIntent.status === "succeeded") {
-        // Payment succeeded - call confirm-payment to sync to Billbee/Calendar
-        try {
-          const confirmResponse = await fetch("/api/confirm-payment", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              paymentIntentId: paymentIntent.id,
-            }),
-          })
-
-          const result = await confirmResponse.json()
-
-          if (result.success) {
-            // Store order data in sessionStorage for success page
-            sessionStorage.setItem("lastOrder", JSON.stringify({
-              customerInfo,
-              items,
-              fulfillmentOption,
-              deliveryDistanceKm,
-              deliveryFee: deliveryTotal,
-              pickupLocations,
-              pricing: {
-                subtotal,
-                tax,
-                vatRate,
-                deliveryFee: deliveryTotal,
-                total: totalAmount,
-              },
-            }))
-            clearCart()
-            router.push("/checkout/success")
-          } else {
-            setError(t("checkout.orderConfirmationFailed"))
-          }
-        } catch (err) {
-          setError(t("checkout.orderConfirmationFailed"))
-          console.error("Order confirmation failed:", err)
-        }
+        return
       }
+
+      if (!paymentIntent) {
+        return
+      }
+
+      persistLastOrder()
+
+      if (paymentIntent.status === "succeeded") {
+        const finalizationResult = await finalizeOrderSync(paymentIntent.id)
+        if (finalizationResult === "success") {
+          clearCart()
+          navigateToSuccess(paymentIntent.id)
+          return
+        }
+
+        if (finalizationResult === "retryable") {
+          navigateToSuccess(paymentIntent.id)
+        }
+
+        return
+      }
+
+      if (paymentIntent.status === "processing" || paymentIntent.status === "requires_action") {
+        navigateToSuccess(paymentIntent.id)
+        return
+      }
+
+      setError(t("checkout.paymentPendingFinalization"))
     } catch (err) {
       const fallbackMessage = err instanceof Error ? err.message : undefined
       setError(getLocalizedPaymentError(fallbackMessage, t))
     } finally {
       setProcessing(false)
     }
+  }
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault()
+    setConsentAccepted(false)
+    setShowConsentDialog(true)
+  }
+
+  const handleConsentAccept = async () => {
+    if (!consentAccepted || processing) {
+      return
+    }
+
+    setShowConsentDialog(false)
+    await processPayment()
+  }
+
+  const handleConsentDecline = () => {
+    setShowConsentDialog(false)
+    setConsentAccepted(false)
+    router.push("/cart")
   }
 
   return (
@@ -195,6 +274,49 @@ function PaymentForm({ customerInfo, onBack }: StripePaymentFormProps) {
             </Button>
           </div>
         </form>
+
+        <AlertDialog open={showConsentDialog} onOpenChange={setShowConsentDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("checkout.consentTitle")}</AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3 text-sm text-left">
+                  <p>{t("checkout.consentIntro")}</p>
+                  <ul className="list-disc space-y-1 pl-5">
+                    <li>{t("checkout.consentPointBinding")}</li>
+                    <li>
+                      {t("checkout.consentPointTerms")} <a href={TERMS_URL} target="_blank" rel="noopener noreferrer" className="underline">{t("checkout.termsOfService")}</a> · <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer" className="underline">{t("checkout.privacyPolicy")}</a>
+                    </li>
+                    <li>{t("checkout.consentPointWithdrawal")}</li>
+                    <li>{t("checkout.consentPointData")}</li>
+                  </ul>
+                  <label className="flex items-start gap-2 pt-1">
+                    <input
+                      type="checkbox"
+                      checked={consentAccepted}
+                      onChange={(event) => setConsentAccepted(event.target.checked)}
+                    />
+                    <span>{t("checkout.consentCheckbox")}</span>
+                  </label>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={handleConsentDecline}>
+                {t("checkout.consentDecline")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(event) => {
+                  event.preventDefault()
+                  void handleConsentAccept()
+                }}
+                disabled={!consentAccepted || processing}
+              >
+                {t("checkout.consentAccept")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   )

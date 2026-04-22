@@ -67,6 +67,7 @@ export default function CheckoutSuccessPage() {
   const searchParams = useSearchParams()
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [isFinalizingPayment, setIsFinalizingPayment] = useState(false)
+  const [paymentFinalizationNotice, setPaymentFinalizationNotice] = useState<string | null>(null)
   const [paymentFinalizationError, setPaymentFinalizationError] = useState<string | null>(null)
   const finalizedPaymentIntentRef = useRef<string | null>(null)
   const paymentIntentId = searchParams.get("payment_intent")
@@ -123,26 +124,50 @@ export default function CheckoutSuccessPage() {
 
     const replayPaymentFinalization = async () => {
       setIsFinalizingPayment(true)
+      setPaymentFinalizationNotice(null)
       setPaymentFinalizationError(null)
 
       try {
-        const response = await fetch("/api/confirm-payment", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            paymentIntentId,
-          }),
-        })
+        const maxAttempts = 15
 
-        const result = await response.json().catch(() => ({})) as { success?: boolean; error?: string }
-        if (!response.ok || !result.success) {
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          if (cancelled) {
+            return
+          }
+
+          const response = await fetch("/api/confirm-payment", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              paymentIntentId,
+            }),
+          })
+
+          const result = await response.json().catch(() => ({})) as {
+            success?: boolean
+            error?: string
+            retryable?: boolean
+          }
+
+          if (response.ok && result.success) {
+            if (!cancelled) {
+              window.sessionStorage.setItem(storageKey, "1")
+            }
+            return
+          }
+
+          if (response.status === 202 || result.retryable) {
+            await new Promise((resolve) => setTimeout(resolve, 3000))
+            continue
+          }
+
           throw new Error(result.error || "Failed to confirm payment")
         }
 
         if (!cancelled) {
-          window.sessionStorage.setItem(storageKey, "1")
+          setPaymentFinalizationNotice(t("checkout.paymentPendingFinalization"))
         }
       } catch (error) {
         console.error("Payment finalization replay failed:", error)
@@ -283,6 +308,13 @@ export default function CheckoutSuccessPage() {
         <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{paymentFinalizationError}</AlertDescription>
+        </Alert>
+      )}
+
+      {paymentFinalizationNotice && (
+        <Alert className="mb-6 border-2 border-[rgb(var(--mavi-blue))]/20 bg-slate-100">
+          <AlertCircle className="h-4 w-4 text-[rgb(var(--mavi-blue))]" />
+          <AlertDescription className="text-[rgb(var(--mavi-blue))]">{paymentFinalizationNotice}</AlertDescription>
         </Alert>
       )}
 

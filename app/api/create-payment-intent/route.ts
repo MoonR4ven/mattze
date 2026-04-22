@@ -3,12 +3,21 @@ import Stripe from "stripe"
 import { db } from "@/lib/firebase"
 import { addDoc, collection } from "firebase/firestore"
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_dummy_key_for_build", {
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "sk_test_dummy_key_for_build"
+
+const stripe = new Stripe(stripeSecretKey, {
   apiVersion: "2024-06-20",
 })
 
 export async function POST(request: NextRequest) {
   try {
+    if (process.env.NODE_ENV === "production" && stripeSecretKey.startsWith("sk_test_")) {
+      return NextResponse.json(
+        { error: "Payments are temporarily unavailable due to test mode configuration." },
+        { status: 503 },
+      )
+    }
+
     const body = await request.json()
     const { amount, currency = "eur", customerInfo, items, locale = "en", deliveryInfo, pricing } = body
 

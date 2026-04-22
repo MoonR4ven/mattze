@@ -41,6 +41,8 @@ type FinalizePaymentResult =
   | {
       success: false
       error: string
+      retryable?: boolean
+      paymentStatus?: Stripe.PaymentIntent.Status
     }
 
 function isAlreadyExistsError(error: unknown): boolean {
@@ -71,8 +73,31 @@ export async function finalizeSuccessfulPayment(paymentIntentId: string): Promis
     // Retrieve payment intent from Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
 
+    if (process.env.NODE_ENV === "production" && !paymentIntent.livemode) {
+      return {
+        success: false,
+        error: "Test mode payments are not accepted in production",
+        retryable: false,
+        paymentStatus: paymentIntent.status,
+      }
+    }
+
     if (paymentIntent.status !== "succeeded") {
-      return { success: false, error: "Payment not successful" }
+      if (paymentIntent.status === "processing" || paymentIntent.status === "requires_action") {
+        return {
+          success: false,
+          error: "Payment is still processing",
+          retryable: true,
+          paymentStatus: paymentIntent.status,
+        }
+      }
+
+      return {
+        success: false,
+        error: "Payment not successful",
+        retryable: false,
+        paymentStatus: paymentIntent.status,
+      }
     }
 
     const existingOrder = await findExistingOrderByPaymentIntent(paymentIntent.id)
@@ -427,8 +452,28 @@ export async function POST(request: NextRequest) {
 
     const result = await finalizeSuccessfulPayment(paymentIntentId)
     if (!result.success) {
+      if (result.retryable) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: result.error,
+            retryable: true,
+            paymentStatus: result.paymentStatus,
+          },
+          { status: 202 },
+        )
+      }
+
       const statusCode = result.error === "Payment not successful" ? 400 : 500
-      return NextResponse.json({ error: result.error }, { status: statusCode })
+      return NextResponse.json(
+        {
+          success: false,
+          error: result.error,
+          retryable: false,
+          paymentStatus: result.paymentStatus,
+        },
+        { status: statusCode },
+      )
     }
 
     return NextResponse.json({
