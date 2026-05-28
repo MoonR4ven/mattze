@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from "react"
 import { getSettings, type AppSettings } from "@/lib/settings"
 import { calculateSubtotal, calculateTaxTotal } from "@/lib/cart-pricing"
 import { useI18n } from "@/contexts/i18n-context"
+import { getCartLineKey, useCartItemAvailability } from "@/hooks/use-cart-item-availability"
 
 export function CartPage() {
   const {
@@ -30,6 +31,7 @@ export function CartPage() {
   } = useCart()
   const { t } = useI18n()
   const [settings, setSettings] = useState<AppSettings | null>(null)
+  const { maxQuantityByLineKey, isLoading: isLoadingAvailability } = useCartItemAvailability(items)
 
   const eligiblePickupLocations = useMemo(() => (
     settings?.pickupLocations?.filter((location) =>
@@ -89,8 +91,15 @@ export function CartPage() {
         <div className="grid lg:grid-cols-3 gap-6 sm:gap-8">
           <div className="lg:col-span-2 space-y-3 sm:space-y-4">
             {items.map((item, index) => (
-              <Card key={`${item.id}-${item.selectedDate}-${item.selectedTime}-${index}`}>
+              <Card key={getCartLineKey(item, index)}>
                 <CardContent className="p-3 sm:p-6">
+                  {(() => {
+                    const lineKey = getCartLineKey(item, index)
+                    const inventory = item.inventory || 1
+                    const maxQuantity = maxQuantityByLineKey[lineKey] ?? inventory
+                    const showAvailabilityWarning = !isLoadingAvailability && maxQuantity < inventory && item.quantity >= maxQuantity
+
+                    return (
                   <div className="flex gap-3 sm:gap-4">
                   <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                     <Image
@@ -147,7 +156,12 @@ export function CartPage() {
                           <Minus className="h-3 w-3" />
                         </Button>
                         <span className="w-8 text-center">{item.quantity}</span>
-                        <Button variant="outline" size="sm" onClick={() => updateQuantity(item.id, item.quantity + 1, item.startDate, item.endDate, item.selectedDate)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateQuantity(item.id, item.quantity + 1, item.startDate, item.endDate, item.selectedDate)}
+                          disabled={isLoadingAvailability || item.quantity >= maxQuantity}
+                        >
                           <Plus className="h-3 w-3" />
                         </Button>
                       </div>
@@ -156,8 +170,16 @@ export function CartPage() {
                         <div className="text-sm text-muted-foreground">€{item.price.toFixed(2)} {t("product.perDay")}</div>
                       </div>
                     </div>
+
+                    {showAvailabilityWarning && (
+                      <p className="text-xs text-amber-700">
+                        {t("booking.insufficientInventory").replace("{available}", String(maxQuantity))}
+                      </p>
+                    )}
                   </div>
                 </div>
+                    )
+                  })()}
               </CardContent>
             </Card>
             ))}

@@ -1,5 +1,10 @@
 import { collection, getDocs, addDoc, query, where } from "firebase/firestore"
 import { db } from "./firebase"
+import {
+  getBookedDatesForReservation,
+  reservationIncludesDate,
+  toPositiveQuantity,
+} from "./booking-availability"
 
 export interface Booking {
   id: string
@@ -55,25 +60,25 @@ export async function getBookingsForDate(productId: string, date: string): Promi
       const order = doc.data()
       if (order.items && Array.isArray(order.items)) {
         for (const item of order.items) {
-          if (item.id === productId && item.startDate && item.endDate) {
-            const checkDate = new Date(date)
-            const startDate = new Date(item.startDate)
-            const endDate = new Date(item.endDate)
-            
-            if (checkDate >= startDate && checkDate <= endDate) {
+          if (item.id === productId && reservationIncludesDate(item, date)) {
+            const bookedDates = getBookedDatesForReservation(item)
+            const bookingStartDate = bookedDates[0] || date
+
+            if (bookingStartDate) {
               // This date is booked as part of a range
               bookings.push({
-                id: `order-${doc.id}-${item.id}`,
+                id: `order-${doc.id}-${item.id}-${date}`,
                 productId: productId,
                 productName: item.name,
                 date: date,
-                startTime: "00:00",
-                endTime: "23:59",
+                startTime: item.startTime || "00:00",
+                endTime: item.endTime || "23:59",
                 customerEmail: order.customerInfo?.email || "",
                 customerName: `${order.customerInfo?.firstName} ${order.customerInfo?.lastName}`,
                 status: "confirmed",
                 createdAt: order.createdAt,
-                price: item.price || 0,
+                price: item.totalPrice ?? item.price ?? 0,
+                quantity: toPositiveQuantity(item.quantity),
               })
               break
             }
@@ -208,50 +213,13 @@ export async function getAvailableQuantityForDate(
     const ordersSnapshot = await getDocs(ordersQ)
     let bookedQuantity = 0
     
-    // Parse the check date
-    const [checkYear, checkMonth, checkDay] = date.split('-').map(Number)
-    const checkDate = new Date(checkYear, checkMonth - 1, checkDay)
-    
     // Sum up quantities booked on this date
     for (const doc of ordersSnapshot.docs) {
       const order = doc.data()
       if (order.items && Array.isArray(order.items)) {
         for (const item of order.items) {
-          if (item.id === productId) {
-            // Check if item has start and end dates (rental booking)
-            if (item.startDate && item.endDate) {
-              let startDate: Date
-              let endDate: Date
-              
-              // Handle both string and timestamp formats
-              if (typeof item.startDate === 'string') {
-                const [sYear, sMonth, sDay] = item.startDate.split('-').map(Number)
-                startDate = new Date(sYear, sMonth - 1, sDay)
-              } else if (item.startDate.toDate) {
-                startDate = item.startDate.toDate()
-              } else {
-                startDate = new Date(item.startDate)
-              }
-              
-              if (typeof item.endDate === 'string') {
-                const [eYear, eMonth, eDay] = item.endDate.split('-').map(Number)
-                endDate = new Date(eYear, eMonth - 1, eDay)
-              } else if (item.endDate.toDate) {
-                endDate = item.endDate.toDate()
-              } else {
-                endDate = new Date(item.endDate)
-              }
-              
-              // Normalize dates to midnight for comparison
-              checkDate.setHours(0, 0, 0, 0)
-              startDate.setHours(0, 0, 0, 0)
-              endDate.setHours(0, 0, 0, 0)
-              
-              // Check if this date falls within the booking range
-              if (checkDate >= startDate && checkDate <= endDate) {
-                bookedQuantity += item.quantity || 1
-              }
-            }
+          if (item.id === productId && reservationIncludesDate(item, date)) {
+            bookedQuantity += toPositiveQuantity(item.quantity)
           }
         }
       }

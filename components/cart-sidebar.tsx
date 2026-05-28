@@ -13,11 +13,13 @@ import { useI18n } from "@/contexts/i18n-context"
 import { useEffect, useState } from "react"
 import { getSettings, type AppSettings } from "@/lib/settings"
 import { calculateSubtotal, calculateTaxTotal } from "@/lib/cart-pricing"
+import { getCartLineKey, useCartItemAvailability } from "@/hooks/use-cart-item-availability"
 
 export function CartSidebar() {
   const { items, isOpen, closeCart, removeFromCart, updateQuantity, getTotalItems, deliveryFee, fulfillmentOption } = useCart()
   const { t } = useI18n()
   const [settings, setSettings] = useState<AppSettings | null>(null)
+  const { maxQuantityByLineKey, isLoading: isLoadingAvailability } = useCartItemAvailability(items)
 
   useEffect(() => {
     getSettings().then(setSettings).catch(() => setSettings(null))
@@ -67,8 +69,15 @@ export function CartSidebar() {
           <>
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {items.map((item, index) => (
+                (() => {
+                  const lineKey = getCartLineKey(item, index)
+                  const inventory = item.inventory || 1
+                  const maxQuantity = maxQuantityByLineKey[lineKey] ?? inventory
+                  const showAvailabilityWarning = !isLoadingAvailability && maxQuantity < inventory && item.quantity >= maxQuantity
+
+                  return (
                 <div
-                  key={`${item.id}-${item.selectedDate}-${item.selectedTime}-${index}`}
+                  key={lineKey}
                   className="bg-gray-50 rounded-lg p-3 space-y-3 border border-gray-200"
                 >
                   <div className="flex gap-3">
@@ -134,6 +143,7 @@ export function CartSidebar() {
                         variant="outline"
                         size="sm"
                         onClick={() => updateQuantity(item.id, item.quantity + 1, item.startDate, item.endDate, item.selectedDate)}
+                        disabled={isLoadingAvailability || item.quantity >= maxQuantity}
                         className="h-7 w-7 p-0"
                       >
                         <Plus className="h-3 w-3" />
@@ -144,7 +154,15 @@ export function CartSidebar() {
                       <div className="text-xs text-muted-foreground">€{item.price.toFixed(2)} / day</div>
                     </div>
                   </div>
+
+                  {showAvailabilityWarning && (
+                    <p className="text-xs text-amber-700">
+                      {t("booking.insufficientInventory").replace("{available}", String(maxQuantity))}
+                    </p>
+                  )}
                 </div>
+                  )
+                })()
               ))}
             </div>
 
