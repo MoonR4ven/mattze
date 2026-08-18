@@ -45,6 +45,40 @@ type FinalizePaymentResult =
       paymentStatus?: Stripe.PaymentIntent.Status
     }
 
+function getStripePaymentMethodType(paymentIntent: Stripe.PaymentIntent): string {
+  const latestCharge = paymentIntent.latest_charge
+  if (latestCharge && typeof latestCharge !== "string") {
+    const latestChargeMethodType = latestCharge.payment_method_details?.type
+    if (typeof latestChargeMethodType === "string" && latestChargeMethodType.length > 0) {
+      return latestChargeMethodType
+    }
+  }
+
+  const paymentMethod = paymentIntent.payment_method
+  if (paymentMethod && typeof paymentMethod !== "string") {
+    if (typeof paymentMethod.type === "string" && paymentMethod.type.length > 0) {
+      return paymentMethod.type
+    }
+  }
+
+  return paymentIntent.payment_method_types?.[0] || "card"
+}
+
+function getStripePaymentMethodName(paymentMethodType: string): string {
+  return (
+    {
+      card: "Credit/Debit Card",
+      klarna: "Klarna",
+      amazon_pay: "Amazon Pay",
+      bancontact: "Bancontact",
+      eps: "EPS",
+      ideal: "iDEAL",
+      sepa_debit: "SEPA Direct Debit",
+      paypal: "PayPal",
+    }[paymentMethodType] || paymentMethodType.toUpperCase()
+  )
+}
+
 function isAlreadyExistsError(error: unknown): boolean {
   if (!error || typeof error !== "object") {
     return false
@@ -71,7 +105,9 @@ export async function finalizeSuccessfulPayment(paymentIntentId: string): Promis
     db = initializeFirebaseAdmin()
 
     // Retrieve payment intent from Stripe
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+      expand: ["latest_charge", "payment_method"],
+    })
 
     if (process.env.NODE_ENV === "production" && !paymentIntent.livemode) {
       return {
@@ -126,6 +162,8 @@ export async function finalizeSuccessfulPayment(paymentIntentId: string): Promis
     const orderItems = Array.isArray(tempOrderData.items) ? tempOrderData.items : []
     const deliveryInfo = tempOrderData.deliveryInfo || null
     const pricing = tempOrderData.pricing || null
+    const paymentMethodType = getStripePaymentMethodType(paymentIntent)
+    const paymentMethodName = getStripePaymentMethodName(paymentMethodType)
 
     const addDaysToDateString = (dateString: string, days: number): string => {
       const [year, month, day] = dateString.split("-").map(Number)
@@ -194,6 +232,8 @@ export async function finalizeSuccessfulPayment(paymentIntentId: string): Promis
       currency: paymentIntent.currency,
       status: "confirmed",
       paymentStatus: "paid",
+      paymentMethodType,
+      paymentMethodName,
       paymentDate: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       billbeeOrderId: null,
@@ -342,20 +382,6 @@ export async function finalizeSuccessfulPayment(paymentIntentId: string): Promis
         }
       }
 
-      // Get payment method details from Stripe
-      const paymentMethodType = paymentIntent.payment_method_types?.[0] || "card"
-      const paymentMethodName =
-        {
-          card: "Credit/Debit Card",
-          klarna: "Klarna",
-          amazon_pay: "Amazon Pay",
-          bancontact: "Bancontact",
-          eps: "EPS",
-          ideal: "iDEAL",
-          sepa_debit: "SEPA Direct Debit",
-          paypal: "PayPal",
-        }[paymentMethodType] || paymentMethodType.toUpperCase()
-
       // Create the order
       const billbeeResult = await billbeeAPI.createOrder({
         orderId: customOrderNumber,
@@ -388,11 +414,21 @@ export async function finalizeSuccessfulPayment(paymentIntentId: string): Promis
         // Create invoice in Billbee
         const invoiceResult = await billbeeAPI.createInvoice(billbeeResult.billbeeOrderId)
 
-        if (invoiceResult.success && invoiceResult.invoiceId) {
-          await orderRef.update({
-            billbeeInvoiceId: invoiceResult.invoiceId,
+        if (invoiceResult.success && (invoiceResult.invoiceId || invoiceResult.invoiceNumber)) {
+          const invoiceUpdates: Record<string, string> = {
             billbeeStatus: "invoiced",
-          })
+            invoiceCreatedAt: new Date().toISOString(),
+          }
+
+          if (invoiceResult.invoiceId) {
+            invoiceUpdates.billbeeInvoiceId = invoiceResult.invoiceId
+          }
+
+          if (invoiceResult.invoiceNumber) {
+            invoiceUpdates.invoiceNumber = invoiceResult.invoiceNumber
+          }
+
+          await orderRef.update(invoiceUpdates)
         }
 
         console.log(`✅ Billbee order created: ${billbeeResult.billbeeOrderId}`)

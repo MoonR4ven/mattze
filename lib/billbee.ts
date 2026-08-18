@@ -247,7 +247,9 @@ export class BillbeeAPI {
     }
   }
 
-  async createInvoice(billbeeOrderId: string): Promise<{ success: boolean; invoiceId?: string; error?: string }> {
+  async createInvoice(
+    billbeeOrderId: string,
+  ): Promise<{ success: boolean; invoiceId?: string; invoiceNumber?: string; error?: string }> {
     try {
       const response = await fetch(`${this.baseUrl}/orders/${billbeeOrderId}/invoice`, {
         method: "POST",
@@ -263,10 +265,13 @@ export class BillbeeAPI {
       }
 
       const result = await response.json()
+      const invoiceId = result.Data?.InvoiceId || result.Data?.Id || result.InvoiceId || result.Id
+      const invoiceNumber = result.Data?.InvoiceNumber || result.InvoiceNumber
 
       return {
         success: true,
-        invoiceId: result.Data?.Id || result.Id,
+        invoiceId: invoiceId != null ? String(invoiceId) : undefined,
+        invoiceNumber: invoiceNumber != null ? String(invoiceNumber) : undefined,
       }
     } catch (error) {
       console.error("Error creating Billbee invoice:", error)

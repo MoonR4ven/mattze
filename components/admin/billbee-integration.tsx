@@ -11,6 +11,7 @@ interface Order {
   id: string
   billbeeOrderId?: string
   billbeeInvoiceId?: string
+  invoiceNumber?: string | number
   billbeeStatus?: string
   billbeeError?: string
   status: string
@@ -163,6 +164,17 @@ export function BillbeeIntegration({ order, onOrderUpdate }: BillbeeIntegrationP
                 </a>
               ) : (
                 <span className="text-muted-foreground">Not created</span>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-muted-foreground">Invoice Number</label>
+            <div className="mt-1">
+              {order.invoiceNumber ? (
+                <span>{order.invoiceNumber}</span>
+              ) : (
+                <span className="text-muted-foreground">Unavailable</span>
               )}
             </div>
           </div>

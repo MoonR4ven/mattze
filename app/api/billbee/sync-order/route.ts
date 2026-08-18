@@ -57,6 +57,11 @@ export async function POST(request: NextRequest) {
 
       if (billbeeOrder.Data.InvoiceNumber) {
         updates.invoiceNumber = billbeeOrder.Data.InvoiceNumber
+        updates.billbeeStatus = "invoiced"
+      }
+
+      if (billbeeOrder.Data.InvoiceDate) {
+        updates.invoiceCreatedAt = billbeeOrder.Data.InvoiceDate
       }
     }
 
